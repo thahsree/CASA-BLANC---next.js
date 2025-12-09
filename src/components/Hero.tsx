@@ -28,7 +28,7 @@ const Hero = ({ image = "/banner3.png" }: Props) => {
           {/* Main Headline */}
           <h1
             className="font-montserrat font-bold tracking-tight leading-[1.1]
-                         text-[36px] sm:text-[42px] md:text-[55px] lg:text-[64px]"
+                         text-[64px] max-sm:text-[42px] max-md:text-[55px]"
           >
             Elevate Your Living Space with{" "}
             <span className="text-[#C9B27B] font-semibold whitespace-nowrap">
@@ -39,7 +39,7 @@ const Hero = ({ image = "/banner3.png" }: Props) => {
           {/* Subline */}
           <p
             className="font-quicksand opacity-85 leading-relaxed
-                        text-[15px] sm:text-[17px] md:text-[20px] max-w-lg"
+                        text-[23px] max-sm:text-[17px] max-md:text-[20px] max-w-lg"
           >
             Smart solutions crafted to upgrade every corner of your home.
           </p>

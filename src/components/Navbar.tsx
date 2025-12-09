@@ -34,19 +34,18 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 font-quicksand text-[20px] ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 font-quicksand text-[20px] h-[84px] max-sm:h-[70px] ${
           scrolled
             ? "bg-[#000000] backdrop-blur-lg shadow-md text-slate-900"
             : "bg-transparent text-white"
         }`}
-        style={{ height: NAV_HEIGHT }}
         aria-label="Main navigation"
       >
         <div className="mx-auto h-full flex items-center justify-between px-6 md:px-10">
           {/* Hamburger Menu (Mobile) */}
           <div className="md:hidden flex gap-3 justify-center items-center">
             <button
-              className="md:hidden flex items-center justify-center p-2"
+              className="md:hidden flex items-center justify-center p-2 text-white opacity-75"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
@@ -54,7 +53,7 @@ export default function Navbar() {
               {mobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </button>
             <button className="md:hidden hover:opacity-75 w-[24] h-[24] flex items-center justify-center">
-              <LiaSearchDollarSolid className="w-full h-full" />
+              <LiaSearchDollarSolid className="w-full h-full text-white opacity-75" />
             </button>
           </div>
           {/* Desktop Navigation */}
@@ -79,12 +78,15 @@ export default function Navbar() {
           </ul>
 
           {/* Logo */}
-          <Link href="/" className="w-[100px] h-[100px]">
+          <Link
+            href="/"
+            className="w-[100px] h-[100px] max-sm:w-[60px] max-sm:h-[60px]"
+          >
             <img src="/logo.png" alt="logo" className="w-full h-full" />
           </Link>
 
           {/* Right Actions (Desktop) */}
-          <div className="flex items-center gap-10 md:min-w-[250px] justify-end text-[#737373]">
+          <div className="flex items-center gap-10 md:min-w-[250px] justify-end text-white opacity-75">
             <button className="hidden md:flex hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF]">
               <LiaSearchDollarSolid className="w-full h-full" />
             </button>

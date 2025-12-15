@@ -1,13 +1,10 @@
 "use client";
+import { useCart } from "@/context/CartContext";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
-import {
-  LiaPersonBoothSolid,
-  LiaSearchDollarSolid,
-  LiaShoppingBagSolid,
-} from "react-icons/lia";
+import { LiaPersonBoothSolid, LiaShoppingBagSolid } from "react-icons/lia";
 
 const NAV_HEIGHT = 84;
 
@@ -19,6 +16,8 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { cartItemCount } = useCart();
   const [scrolled, setScrolled] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
@@ -31,12 +30,16 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const handleCartClick = () => {
+    router.push("/cart");
+  };
+
   return (
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 font-quicksand text-[20px] h-[84px] max-sm:h-[70px] ${
           scrolled
-            ? "bg-[#000000] backdrop-blur-lg shadow-md text-slate-900"
+            ? "bg-[#080808]/95 backdrop-blur-lg shadow-md text-slate-900"
             : "bg-transparent text-white"
         }`}
         aria-label="Main navigation"
@@ -51,9 +54,6 @@ export default function Navbar() {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
-            </button>
-            <button className="md:hidden hover:opacity-75 w-[24] h-[24] flex items-center justify-center">
-              <LiaSearchDollarSolid className="w-full h-full text-white opacity-75" />
             </button>
           </div>
           {/* Desktop Navigation */}
@@ -86,15 +86,21 @@ export default function Navbar() {
           </Link>
 
           {/* Right Actions (Desktop) */}
-          <div className="flex items-center gap-10 md:min-w-[250px] justify-end text-white opacity-75">
-            <button className="hidden md:flex hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF]">
-              <LiaSearchDollarSolid className="w-full h-full" />
+          <div className="flex items-center gap-10 md:min-w-[250px] justify-end text-white opacity-75 max-md:gap-7 max-sm:gap-5">
+            <button
+              onClick={handleCartClick}
+              className="relative hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF] transition-opacity"
+            >
+              <LiaShoppingBagSolid className="w-full h-full" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartItemCount > 9 ? "9+" : cartItemCount}
+                </span>
+              )}
             </button>
+            {/* profile */}
             <button className="hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF]">
               <LiaPersonBoothSolid className="w-full h-full" />
-            </button>
-            <button className="hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF]">
-              <LiaShoppingBagSolid className="w-full h-full" />
             </button>
           </div>
         </div>
@@ -128,6 +134,22 @@ export default function Navbar() {
                 </li>
               );
             })}
+            <li>
+              <button
+                onClick={() => {
+                  handleCartClick();
+                  setMobileMenuOpen(false);
+                }}
+                className="font-medium transition-colors block py-2 hover:text-[#FFFFFF] opacity-75 text-left relative"
+              >
+                Cart
+                {cartItemCount > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemCount > 9 ? "9+" : cartItemCount}
+                  </span>
+                )}
+              </button>
+            </li>
           </ul>
         </div>
       )}

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const PRODUCTS_QUERY = `
   query {
-    products(first: 20) {
+    products(first: 100, sortKey: CREATED_AT, reverse: true) {
       edges {
         node {
           id

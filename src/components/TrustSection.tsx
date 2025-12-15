@@ -51,14 +51,14 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
   return (
     <section className="w-full pt-32 bg-[#080808] opacity-95 text-white py-20 px-6 md:px-12 relative overflow-hidden">
       {/* Bokeh background layer (blurred circles) */}
-      <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/50 to-transparent md:from-black/70 md:via-black/40" />
+      {/* <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/50 to-transparent md:from-black/70 md:via-black/40" /> */}
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Top Section */}
         <div className="grid md:grid-cols-2 gap-12 items-center">
           {/* Product Image with Frame */}
-          <div className="flex justify-center md:justify-start max-md:hidden">
-            <div className="p-6 rounded-md ">
+          <div className="flex justify-center md:justify-start max-md:hidden ">
+            <div className=" rounded-md ">
               {/* bg-[#D9C59A] */}
               <img
                 src={image}
@@ -71,7 +71,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
           {/* Trust Content */}
 
           <div className="space-y-4 text-center md:text-left">
-            <h2 className="font-abel font-bold leading-[1.05] opacity-90  text-[64px] max-sm:text-[42px] max-md:text-[55px]">
+            <h2 className="font-montserrat text-white/90 tracking-tight leading-[1.1] font-semibold text-[64px] max-sm:text-[42px] max-md:text-[55px]">
               Trusted by Smart Home Owners Across India.
             </h2>
 
@@ -116,7 +116,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
 
         {/* Why Choose Us */}
         <div className="mt-24 text-center pt-12 max-md:pt-8 max-sm:pt-6 text-white/90">
-          <h3 className="font-abel font-medium text-[64px] max-sm:text-[42px] max-md:text-[55px]">
+          <h3 className="font-montserrat tracking-tight leading-[1.1] text-[64px] max-sm:text-[42px] max-md:text-[55px]">
             Shopping Benefits
           </h3>
 
@@ -132,10 +132,10 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
                   <img src="/delivery.svg" alt="" className="w-full h-full" />
                 </div>
               </div>
-              <h4 className="font-semibold text-[22px] sm:text-[26px] md:text-[32px]">
+              <h4 className="text-[22px] sm:text-[26px] md:text-[32px] font-montserrat font-semibold tracking-normal leading-[1.1]">
                 Fast Delivery
               </h4>
-              <p className="mt-2 text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70">
+              <p className="mt-2 text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05]">
                 Quick dispatch and doorstep delivery for all orders.
               </p>
             </div>
@@ -150,10 +150,10 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
                   />
                 </div>
               </div>
-              <h4 className="font-semibold text-[22px] sm:text-[26px] md:text-[32px]">
+              <h4 className="font-montserrat font-semibold tracking-normal text-[22px] sm:text-[26px] md:text-[32px] leading-[1.1]">
                 100% Secure Payments
               </h4>
-              <p className="mt-2 text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70">
+              <p className="mt-2 text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05]">
                 Encrypted transactions for smooth and safe checkout.
               </p>
             </div>
@@ -164,10 +164,10 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
                   <img src="/return.svg" alt="" className="w-full h-full" />
                 </div>
               </div>
-              <h4 className="font-semibold text-[22px] sm:text-[26px] md:text-[32px]">
+              <h4 className="font-montserrat font-semibold tracking-normal text-[22px] sm:text-[26px] md:text-[32px] leading-[1.1]">
                 Hassle-Free Returns
               </h4>
-              <p className="mt-2 text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70">
+              <p className="mt-2 text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05]">
                 7-day easy replacements for defective products.
               </p>
             </div>

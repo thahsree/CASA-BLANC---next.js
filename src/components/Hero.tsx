@@ -41,7 +41,8 @@ const Hero = ({ image = "/banner3.png" }: Props) => {
             className="font-quicksand opacity-85 leading-relaxed
                         text-[23px] max-sm:text-[17px] max-md:text-[20px] max-w-lg"
           >
-            Smart solutions crafted to upgrade every corner of your home.
+            Thoughtfully designed solutions to elevate every corner of your
+            home.
           </p>
 
           {/* CTA */}
@@ -50,7 +51,7 @@ const Hero = ({ image = "/banner3.png" }: Props) => {
             className="inline-block bg-[#C9B27B] text-[#111111]
                        px-6 py-3 sm:px-7 sm:py-3 md:px-10 md:py-4
                        rounded-md font-semibold shadow-lg
-                       hover:bg-[#c3a86d] transition-all duration-200 w-fit"
+                       hover:bg-[#c3a86d] transition-all duration-200 w-fit font-montserrat"
           >
             Shop Now
           </a>

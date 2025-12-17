@@ -49,7 +49,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
   }, []);
 
   return (
-    <section className="w-full pt-32 bg-[#080808] opacity-95 text-white py-20 px-6 md:px-12 relative overflow-hidden">
+    <section className="w-full pt-32 py-32 max-md:py-16 bg-[#080808] opacity-95 text-white px-6 md:px-12 relative overflow-hidden">
       {/* Bokeh background layer (blurred circles) */}
       {/* <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/50 to-transparent md:from-black/70 md:via-black/40" /> */}
 
@@ -72,7 +72,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
 
           <div className="space-y-4 text-center md:text-left">
             <h2 className="font-montserrat text-white/90 tracking-tight leading-[1.1] font-semibold text-[64px] max-sm:text-[42px] max-md:text-[55px]">
-              Trusted by Smart Home Owners Across India.
+              Trusted by Modern Homeowners Across India
             </h2>
 
             <p className="text-white/80  text-[23px] max-sm:text-[17px] max-md:text-[20px] font-quicksand">
@@ -87,9 +87,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
                 </h3>
 
                 <p className=" text-white/70 mt-1 text-[20px] max-sm:text-[14px] max-md:text-[17px] font-quicksand ">
-                  Smart Gadgets
-                  <br />
-                  Delivered
+                  Products Delivered
                 </p>
               </div>
 
@@ -116,12 +114,12 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
 
         {/* Why Choose Us */}
         <div className="mt-24 text-center pt-12 max-md:pt-8 max-sm:pt-6 text-white/90">
-          <h3 className="font-montserrat tracking-tight leading-[1.1] text-[64px] max-sm:text-[42px] max-md:text-[55px]">
-            Shopping Benefits
+          <h3 className="font-montserrat tracking-tight leading-[1.1] font-medium text-[64px] max-sm:text-[42px] max-md:text-[55px]">
+            Shopping<span className="">&nbsp;</span>Benefits
           </h3>
 
           <p className="text-white/70 mt-4 max-md:mt-3 max-sm:mt-2 font-quicksand mx-auto text-[23px] max-sm:text-[17px] max-md:text-[20px]">
-            Quality-driven smart solutions for a better home experience.
+            Quality-driven solutions for a better home experience
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 mt-16">

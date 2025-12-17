@@ -229,10 +229,11 @@ export default function ProductList() {
                           </p>
 
                           {/* Price and Button */}
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2 ">
                             <span className="font-bold text-sm sm:text-base">
                               {product.priceRange.minVariantPrice.currencyCode}{" "}
                               {product.priceRange.minVariantPrice.amount}
+                              {/* add current price here */}
                             </span>
                             <button
                               onClick={(e) => {

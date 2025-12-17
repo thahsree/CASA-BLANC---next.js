@@ -31,14 +31,13 @@ const faqData = [
 export default function CasaFaq() {
   const [open, setOpen] = useState(0); // open index, default first open
   return (
-    <section className="w-full pt-32 max-md:pt-16 max-sm:pt-8 bg-[#080808] opacity-95 text-white py-20 px-6 relative overflow-hidden flex max-sm:flex-col">
+    <section className="w-full pt-32 max-md:pt-16 py-32 max-md:py-16 bg-[#080808] opacity-95 text-white px-6 relative overflow-hidden flex max-sm:flex-col">
       <div className="space-y-6 px-7 max-sm:px-0 max-md:px-0">
         <h2 className="font-montserrat tracking-tight leading-[1.1] font-medium text-[64px] max-sm:text-[42px] max-md:text-[55px] text-start max-sm:text-center">
           Here Are The Most Asked Questions
         </h2>
         <p className="text-white/70 mt-4 max-md:mt-3 max-sm:mt-2 font-quicksand mx-auto text-[23px] max-sm:text-[17px] max-md:text-[20px] text-start max-sm:text-center">
-          Smart, trusted gadgets for a quieter, simpler home. Quick answers
-          below.
+          Trusted, practical gadgets for a quieter, simpler home.
         </p>
         <img
           src="/images/casa-faq-illustration.svg"

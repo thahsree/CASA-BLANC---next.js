@@ -115,7 +115,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
         {/* Why Choose Us */}
         <div className="mt-24 text-center pt-12 max-md:pt-8 max-sm:pt-6 text-white/90">
           <h3 className="font-montserrat tracking-tight leading-[1.1] font-medium text-[64px] max-sm:text-[42px] max-md:text-[55px]">
-            Shopping<span className="">&nbsp;</span>Benefits
+            Shopping Benefits
           </h3>
 
           <p className="text-white/70 mt-4 max-md:mt-3 max-sm:mt-2 font-quicksand mx-auto text-[23px] max-sm:text-[17px] max-md:text-[20px]">

@@ -1,6 +1,6 @@
 const Subscription = ({ image = "/kitchen2.png" }) => {
   return (
-    <section className="relative w-full h-[70vh] max-md:h-[50vh] max-sm:h-[40vh]  overflow-hidden">
+    <section className="relative w-full h-[70vh] max-md:h-[50vh] max-sm:h-[40vh] mt-32 max-md:mt-16 max-sm:mt-10">
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -31,7 +31,7 @@ const Subscription = ({ image = "/kitchen2.png" }) => {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 text-black outline-none max-sm:px-1 max-sm:py-2 max-md:px-3 max-md:py-2 font-quicksand text-[16px] max-sm:text-[12px] max-md:text-[14px]"
+                  className="w-[300px] max-sm:w-[150px] max-md:w-[250px] flex-1 px-4 py-3 text-black outline-none max-sm:px-1 max-sm:py-2 max-md:px-3 max-md:py-2 font-quicksand text-[16px] max-sm:text-[12px] max-md:text-[14px]"
                 />
                 <button
                   className="inline-block bg-[#C9B27B] text-[#111111] text-lg max-sm:text-xs max-md:text-sm

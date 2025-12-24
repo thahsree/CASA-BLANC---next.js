@@ -18,7 +18,7 @@ const PRODUCT_BY_ID_QUERY = `
           edges { node { url altText } }
         }
         variants(first: 10) {
-          edges { node { id title price { amount currencyCode } } }
+          edges { node { id title price { amount currencyCode } compareAtPrice { amount currencyCode } } }
         }
       }
     }

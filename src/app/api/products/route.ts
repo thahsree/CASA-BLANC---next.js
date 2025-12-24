@@ -28,6 +28,10 @@ const PRODUCTS_QUERY = `
             edges {
               node {
                 id
+                compareAtPrice {
+                  amount
+                  currencyCode
+                }
               }
             }
           }

@@ -221,10 +221,10 @@ export default function ProductList() {
                           </div>
                         )}
                         <div className="p-3 sm:p-4 flex flex-col flex-1">
-                          <h3 className="font-semibold text-sm sm:text-base lg:text-lg mb-2 line-clamp-2">
+                          <h3 className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-1 font-montserrat">
                             {product.title}
                           </h3>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 flex-1">
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 flex-1 font-quicksand">
                             {product.description}
                           </p>
 

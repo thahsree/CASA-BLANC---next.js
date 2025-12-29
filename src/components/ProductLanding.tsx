@@ -1,8 +1,8 @@
 "use client";
 import { useCart } from "@/context/CartContext";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import ProductCard from "./ProductCard";
 import ProductSkeleton from "./ProductSkeleton";
 
 // ProductLanding component
@@ -239,72 +239,20 @@ export default function ProductLanding() {
       {/* Products Grid */}
       <div className="grid grid-cols-4 [@media(min-width:642px)_and_(max-width:1042px)]:grid-cols-3 max-md:grid-cols-3 max-sm:grid-cols-2 gap-6 max-md:gap-3 max-sm:gap-x-1 max-sm:gap-y-5 max-md:gap-y-4">
         {paginatedProducts.map((product) => (
-          <div
+          <ProductCard
             key={product.id}
-            onClick={() => handleCardClick(encodeURIComponent(product.id))}
-            className="slide-animation bg-white dark:bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full cursor-pointer"
-          >
-            {product.images?.edges?.[0] && (
-              <div className="relative w-full h-48">
-                <Image
-                  src={product.images.edges[0].node.url}
-                  alt={product.images.edges[0].node.altText || product.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            )}
-
-            <div className="p-4 max-md:p-3 max-sm:p-2 flex flex-col flex-grow">
-              <h3 className="text-lg mb-1 max-md:text-base max-sm:text-sm leading-tight font-montserrat font-medium line-clamp-1">
-                {product.title}
-              </h3>
-              <p className="text-base max-md:text-sm text-gray-600 line-clamp-2 flex-grow font-quicksand max-sm:text-xs">
-                {product.description}
-              </p>
-
-              <div className=" bg-zinc-900 rounded-lg mt-3 flex flex-col items-start gap-2 justify-between w-full p-3">
-                <div className="flex items-center gap-2 w-full">
-                  <div className="font-bold text-base max-md:text-sm text-[FFFFFF]/70">
-                    INR. {product.priceRange?.minVariantPrice?.amount}
-                  </div>
-                  {product.variants?.edges?.[0]?.node?.compareAtPrice
-                    ?.amount && (
-                    <div className="font-extralight text-base max-md:text-sm line-through text-gray-500">
-                      {product.variants?.edges?.[0]?.node?.compareAtPrice
-                        ?.amount == 0
-                        ? ""
-                        : product.variants?.edges?.[0]?.node?.compareAtPrice
-                            ?.amount}
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const variantId = product.variants?.edges?.[0]?.node?.id;
-                    const isInCart = variantId && cartVariantIds.has(variantId);
-                    if (!isInCart) {
-                      handleAddToCart(product, updateCartCount);
-                    }
-                  }}
-                  className={`px-4 py-2 max-md:px-2 max-md:py-1 rounded-md text-sm font-medium w-full max-md:text-sm ${
-                    cartVariantIds.has(
-                      product.variants?.edges?.[0]?.node?.id || ""
-                    )
-                      ? "bg-green-600 text-white hover:bg-green-700 cursor-default"
-                      : "bg-[#C9B27B] text-black hover:bg-[#b39f62] cursor-pointer"
-                  }`}
-                >
-                  {cartVariantIds.has(
-                    product.variants?.edges?.[0]?.node?.id || ""
-                  )
-                    ? "In Cart"
-                    : "Add to cart"}
-                </button>
-              </div>
-            </div>
-          </div>
+            product={product}
+            cartVariantIds={cartVariantIds}
+            onCardClick={handleCardClick}
+            onAddToCart={(e, prod) => {
+              e.stopPropagation();
+              const variantId = prod.variants?.edges?.[0]?.node?.id;
+              const isInCart = variantId && cartVariantIds.has(variantId);
+              if (!isInCart) {
+                handleAddToCart(prod, updateCartCount);
+              }
+            }}
+          />
         ))}
       </div>
 

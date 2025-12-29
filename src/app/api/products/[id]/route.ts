@@ -40,7 +40,6 @@ export async function GET(request: NextRequest, context: { params?: { id?: strin
     id = decodeURIComponent(id);
   }
   
-  console.log('GET /api/products/[id] -> decoded id:', id);
 
   if (!id) {
     // Return 200 with a structured error so clients don't hard-fail on !res.ok

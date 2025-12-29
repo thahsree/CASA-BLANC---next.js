@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
     // res is the parsed JSON from Shopify GraphQL. Expect { data: { products: ... } }
     const data = res?.data ?? res;
 
-    // Helpful server-side debug (will appear in terminal)
-    console.log('Products route - Shopify response keys:', Object.keys(data || {}));
+    // // Helpful server-side debug (will appear in terminal)
+    // console.log('Products route - Shopify response keys:', Object.keys(data || {}));
 
     if (data?.errors) {
       console.error('Shopify GraphQL errors:', data.errors);

@@ -2,6 +2,9 @@
 import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import DeliveryCheck from "./DeliveryCheck";
+import ReviewSection from "./ReviewSection";
+import SingleProductSkeleton from "./SingleProductSkeleton";
 
 type Props = { id: string };
 
@@ -10,6 +13,7 @@ type Props = { id: string };
 // - Loads product details from `/api/products/:id` and renders a landing view
 // - Adds to cart via `/api/cart` using the first variant
 export default function SingleProductLanding({ id }: Props) {
+  console.log("SingleProductLanding mounted with id:", id);
   const { updateCartCount } = useCart();
   const [product, setProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +114,7 @@ export default function SingleProductLanding({ id }: Props) {
     }
   }
 
-  if (loading) return <div className="p-6">Loading product...</div>;
+  if (loading) return <SingleProductSkeleton />;
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
   if (!product)
     return (
@@ -120,84 +124,86 @@ export default function SingleProductLanding({ id }: Props) {
   const heroImage = product.images?.edges?.[selectedImageIndex]?.node;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-      <div>
-        {heroImage && (
-          <div className="relative w-full h-96 rounded overflow-hidden bg-gray-100">
-            <Image
-              src={heroImage.url}
-              alt={heroImage.altText || product.title}
-              fill
-              className="object-cover"
-            />
-          </div>
-        )}
-        <div className="mt-4 grid grid-cols-4 gap-3">
-          {product.images?.edges?.map((e: any, idx: number) => (
-            <button
-              key={idx}
-              onClick={() => setSelectedImageIndex(idx)}
-              className={`relative w-full h-24 rounded overflow-hidden bg-gray-100 border-2 transition ${
-                selectedImageIndex === idx
-                  ? "border-[#C9B27B]"
-                  : "border-transparent hover:border-gray-300"
-              }`}
-            >
+    <div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div>
+          {heroImage && (
+            <div className="relative w-full h-96 rounded overflow-hidden bg-gray-100">
               <Image
-                src={e.node.url}
-                alt={e.node.altText || product.title}
+                src={heroImage.url}
+                alt={heroImage.altText || product.title}
                 fill
                 className="object-cover"
               />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h1 className="text-3xl font-semibold">{product.title}</h1>
-        <div className="flex gap-2 items-center">
-          <div className="text-xl font-bold">
-            {product.priceRange?.minVariantPrice?.currencyCode}{" "}
-            {product.priceRange?.minVariantPrice?.amount}
-          </div>
-          {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount && (
-            <div className="font-extralight text-xl line-through text-gray-500">
-              {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount == 0
-                ? ""
-                : product.variants?.edges?.[0]?.node?.compareAtPrice?.amount}
             </div>
           )}
+          <div className="mt-4 grid grid-cols-4 gap-3">
+            {product.images?.edges?.map((e: any, idx: number) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedImageIndex(idx)}
+                className={`relative w-full h-24 rounded overflow-hidden bg-gray-100 border-2 transition ${
+                  selectedImageIndex === idx
+                    ? "border-[#C9B27B]"
+                    : "border-transparent hover:border-gray-300"
+                }`}
+              >
+                <Image
+                  src={e.node.url}
+                  alt={e.node.altText || product.title}
+                  fill
+                  className="object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Primary CTA - Add to Cart */}
-        <button
-          onClick={handleAddToCart}
-          disabled={addingToCart}
-          className="w-full px-4 py-3 bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {addingToCart ? "Adding..." : "Add to Cart"}
-        </button>
+        <div className="space-y-4">
+          <h1 className="text-3xl font-semibold">{product.title}</h1>
+          <div className="flex gap-2 items-center">
+            <div className="text-xl font-bold">
+              {product.priceRange?.minVariantPrice?.currencyCode}{" "}
+              {product.priceRange?.minVariantPrice?.amount}
+            </div>
+            {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount && (
+              <div className="font-extralight text-xl line-through text-gray-500">
+                {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount == 0
+                  ? ""
+                  : product.variants?.edges?.[0]?.node?.compareAtPrice?.amount}
+              </div>
+            )}
+          </div>
 
-        {/* Secondary CTAs */}
-        <div className="grid grid-cols-2 gap-3">
-          <button className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition">
-            Buy Now
+          {/* Primary CTA - Add to Cart */}
+          <button
+            onClick={handleAddToCart}
+            disabled={addingToCart}
+            className="w-full px-4 py-3 bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {addingToCart ? "Adding..." : "Add to Cart"}
           </button>
-          <button className="px-4 py-2 bg-gray-300 text-gray-800 font-medium rounded hover:bg-gray-400 transition">
-            Add to Wishlist
-          </button>
-        </div>
 
-        {/* Share CTA */}
-        <button className="w-full px-4 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded hover:bg-gray-50 transition">
-          Share Product
-        </button>
+          {/* Secondary CTAs */}
+          <div className="grid grid-cols-2 gap-3">
+            <button className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition">
+              Buy Now
+            </button>
+            {/* Share CTA */}
+            <button className="ppx-4 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded hover:bg-gray-50 transition">
+              Share Product
+            </button>
+          </div>
 
-        <div className="text-gray-600 whitespace-pre-line">
-          {product.description}
+          <div className="text-gray-600 whitespace-pre-line">
+            {product.description}
+          </div>
+          <DeliveryCheck />
         </div>
       </div>
+
+      {/* Reviews Section */}
+      <ReviewSection productId={id} />
     </div>
   );
 }

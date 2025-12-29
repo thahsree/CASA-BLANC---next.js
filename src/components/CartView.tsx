@@ -1,6 +1,7 @@
 "use client";
 import { useCart } from "@/context/CartContext";
 import { useEffect, useState } from "react";
+import CartSkeleton from "./CartSkeleton";
 
 // CartView: a small client component that interacts with existing /api/cart
 // API routes to create/add lines and to fetch the cart. Uses session cookies
@@ -106,7 +107,7 @@ export default function CartView() {
     }
   };
 
-  if (loading) return <div>Loading cart...</div>;
+  if (loading) return <CartSkeleton />;
   if (error) return <div className="text-red-600">Error: {error}</div>;
 
   const lines = cart?.lines?.edges?.map((edge: any) => edge.node) || [];
@@ -118,7 +119,7 @@ export default function CartView() {
       {lines.map((line: any) => (
         <div
           key={line.id}
-          className="flex items-center gap-4 bg-white p-4 rounded shadow"
+          className="flex items-center gap-4 bg-zinc-900 p-4 rounded shadow"
         >
           {line.merchandise?.image?.url && (
             <img
@@ -131,16 +132,16 @@ export default function CartView() {
             <div className="font-semibold">
               {line.merchandise?.product?.title || "Product"}
             </div>
-            <div className="text-sm text-gray-600">
-              {line.merchandise?.title}
-            </div>
-            <div className="text-sm text-gray-500 mb-2">
-              Price: {line.cost?.totalAmount?.currencyCode}{" "}
-              {line.cost?.totalAmount?.amount}
+            <div className="text-sm text-gray-500 mb-2 mt-1">
+              Price: {line.cost?.totalAmount.currencyCode}{" "}
+              {line.quantity > 0
+                ? (line.cost?.totalAmount.amount / line.quantity).toFixed(2)
+                : line.cost?.totalAmount.amount}{" "}
+              {"/unit"}
             </div>
 
             {/* Quantity Controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-black/60">
               <button
                 onClick={() => handleUpdateQuantity(line.id, line.quantity - 1)}
                 disabled={updatingLineId === line.id}
@@ -153,7 +154,7 @@ export default function CartView() {
               </span>
               <button
                 onClick={() => handleUpdateQuantity(line.id, line.quantity + 1)}
-                disabled={updatingLineId === line.id}
+                disabled={updatingLineId === line.id || line.quantity >= 5}
                 className="px-2 py-1 bg-gray-300 hover:bg-gray-400 disabled:opacity-50 rounded text-sm font-semibold"
               >
                 +

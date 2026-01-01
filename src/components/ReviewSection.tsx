@@ -120,7 +120,7 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
 
       if (res.ok && data.success) {
         setSubmitSuccess(
-          "Review submitted successfully! It's now visible to other customers."
+          "Review submitted successfully! It will be published after moderation."
         );
         setNewReview({
           authorName: "",
@@ -147,11 +147,13 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
   };
 
   return (
-    <div className="mt-12 max-w-4xl mx-auto bg-zinc-900">
-      <h2 className="text-2xl font-semibold mb-6">Customer Reviews</h2>
+    <div className="mt-12 max-w-4xl mx-auto bg-zinc-900 px-2 py-5">
+      <h2 className="font-montserrat text-white/90 tracking-tight leading-tight font-normal text-[44px] max-sm:text-[28px] max-md:text-[35px]">
+        Customer Reviews
+      </h2>
 
       {/* Average Rating */}
-      <div className="mb-8 p-6 rounded-lg bg-zinc-600">
+      <div className="mb-8 p-6 rounded-lg bg-zinc-600 ">
         <div className="flex items-center gap-4">
           <div className="text-4xl font-bold">
             {stats.averageRating.toFixed(1)}
@@ -183,12 +185,6 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
           className="px-6 py-2 bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition"
         >
           {showReviewForm ? "Cancel" : "Write a Review"}
-        </button>
-        <button
-          onClick={fetchReviews}
-          className="px-6 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700 transition"
-        >
-          Refresh Reviews
         </button>
       </div>
 

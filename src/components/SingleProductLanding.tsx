@@ -2,6 +2,7 @@
 import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { LiaShoppingBagSolid } from "react-icons/lia";
 import DeliveryCheck from "./DeliveryCheck";
 import ReviewSection from "./ReviewSection";
 import SingleProductSkeleton from "./SingleProductSkeleton";
@@ -15,11 +16,38 @@ type Props = { id: string };
 export default function SingleProductLanding({ id }: Props) {
   console.log("SingleProductLanding mounted with id:", id);
   const { updateCartCount } = useCart();
+
+  const checkIfInCart = async (variantId: string) => {
+    try {
+      const res = await fetch("/api/cart");
+      if (!res.ok) return;
+      const data = await res.json();
+      const lines = data.cart?.lines?.edges || [];
+      const lineItem = lines.find(
+        (edge: any) => edge.node?.merchandise?.id === variantId
+      );
+      if (lineItem) {
+        setIsInCart(true);
+        setCartLineId(lineItem.node?.id || null);
+        setQuantity(lineItem.node?.quantity || 1);
+      } else {
+        setIsInCart(false);
+        setCartLineId(null);
+        setQuantity(1);
+      }
+    } catch (err) {
+      console.error("Failed to check if item is in cart:", err);
+    }
+  };
   const [product, setProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [isInCart, setIsInCart] = useState(false);
+  const [cartLineId, setCartLineId] = useState<string | null>(null);
+  const [updatingQuantity, setUpdatingQuantity] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -33,7 +61,11 @@ export default function SingleProductLanding({ id }: Props) {
           setError(body.error + (body.message ? `: ${body.message}` : ""));
           setProduct(null);
         } else {
-          setProduct(body.product || null);
+          const product = body.product || null;
+          setProduct(product);
+          if (product?.variants?.edges?.[0]?.node?.id) {
+            await checkIfInCart(product.variants.edges[0].node.id);
+          }
         }
       } catch (err: any) {
         console.error("SingleProductLanding: Fetch error:", err);
@@ -87,7 +119,7 @@ export default function SingleProductLanding({ id }: Props) {
       const addResponse = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add", cartId, variantId, quantity: 1 }),
+        body: JSON.stringify({ action: "add", cartId, variantId, quantity }),
       });
 
       if (!addResponse.ok) {
@@ -105,12 +137,72 @@ export default function SingleProductLanding({ id }: Props) {
 
       // Update cart count in context
       await updateCartCount();
+      if (variantId) {
+        await checkIfInCart(variantId);
+      }
       alert("Added to cart successfully!");
     } catch (err: any) {
       console.error("Error adding to cart:", err);
       alert("Failed to add to cart: " + (err.message || "Unknown error"));
     } finally {
       setAddingToCart(false);
+    }
+  }
+
+  async function handleQuantityUpdate(newQuantity: number) {
+    if (!isInCart || !cartLineId) return;
+    setUpdatingQuantity(true);
+
+    try {
+      const cartId = localStorage.getItem("cartId");
+      if (!cartId) {
+        throw new Error("No cart ID found");
+      }
+
+      const updateResponse = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          cartId,
+          lines: [
+            {
+              id: cartLineId,
+              quantity: newQuantity,
+            },
+          ],
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(
+          errorData?.error || `Update cart failed: ${updateResponse.status}`
+        );
+      }
+
+      const updateData = await updateResponse.json();
+
+      if (updateData?.error) {
+        throw new Error(updateData.error);
+      }
+
+      // Update cart count in context
+      await updateCartCount();
+      setQuantity(newQuantity);
+    } catch (err: any) {
+      console.error("Error updating cart quantity:", err);
+      alert("Failed to update quantity: " + (err.message || "Unknown error"));
+      // Revert quantity on error
+      const res = await fetch("/api/cart");
+      const data = await res.json();
+      const lines = data.cart?.lines?.edges || [];
+      const lineItem = lines.find((edge: any) => edge.node?.id === cartLineId);
+      if (lineItem) {
+        setQuantity(lineItem.node?.quantity || 1);
+      }
+    } finally {
+      setUpdatingQuantity(false);
     }
   }
 
@@ -123,12 +215,24 @@ export default function SingleProductLanding({ id }: Props) {
 
   const heroImage = product.images?.edges?.[selectedImageIndex]?.node;
 
+  const handleWhatsAppShare = () => {
+    const productUrl =
+      typeof window !== "undefined" ? window.location.href : "";
+    const message = `Check out this amazing product from Casa Blancc: ${
+      product.title
+    }\n\n${product.description || ""}\n\nPrice: ${
+      product.priceRange?.minVariantPrice?.currencyCode
+    } ${product.priceRange?.minVariantPrice?.amount}\n\n${productUrl}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   return (
-    <div>
+    <div className="w-full h-full">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div>
+        <div className="lg:sticky lg:top-0 lg:h-fit">
           {heroImage && (
-            <div className="relative w-full h-96 rounded overflow-hidden bg-gray-100">
+            <div className="relative w-full h-[500px] max-sm:h-80 rounded overflow-hidden bg-gray-100">
               <Image
                 src={heroImage.url}
                 alt={heroImage.altText || product.title}
@@ -142,7 +246,7 @@ export default function SingleProductLanding({ id }: Props) {
               <button
                 key={idx}
                 onClick={() => setSelectedImageIndex(idx)}
-                className={`relative w-full h-24 rounded overflow-hidden bg-gray-100 border-2 transition ${
+                className={`relative w-full h-20 rounded overflow-hidden bg-gray-100 border-2 transition ${
                   selectedImageIndex === idx
                     ? "border-[#C9B27B]"
                     : "border-transparent hover:border-gray-300"
@@ -159,46 +263,179 @@ export default function SingleProductLanding({ id }: Props) {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h1 className="text-3xl font-semibold">{product.title}</h1>
+        <div className="space-y-6">
+          <div>
+            <h1 className="font-montserrat text-white/90 tracking-tight leading-tight font-normal text-[44px] max-sm:text-[28px] max-md:text-[35px]">
+              {product.title}
+            </h1>
+          </div>
           <div className="flex gap-2 items-center">
-            <div className="text-xl font-bold">
-              {product.priceRange?.minVariantPrice?.currencyCode}{" "}
-              {product.priceRange?.minVariantPrice?.amount}
+            <div
+              className="font-montserrat font-normal tracking-tight
+                         text-[50px] max-sm:text-[28px] max-md:text-[40px] text-white/90"
+            >
+              {"₹ "}{" "}
+              {parseFloat(product.priceRange?.minVariantPrice?.amount).toFixed(
+                0
+              )}
             </div>
             {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount && (
-              <div className="font-extralight text-xl line-through text-gray-500">
+              <div
+                className="font-montserrat font-extralight opacity-60 tracking-tight
+                         text-[35px] max-sm:text-[20px] max-md:text-[28px] line-through text-gray-500"
+              >
                 {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount == 0
                   ? ""
-                  : product.variants?.edges?.[0]?.node?.compareAtPrice?.amount}
+                  : parseFloat(
+                      product.variants?.edges?.[0]?.node?.compareAtPrice?.amount
+                    ).toFixed(0)}
               </div>
             )}
           </div>
 
-          {/* Primary CTA - Add to Cart */}
-          <button
-            onClick={handleAddToCart}
-            disabled={addingToCart}
-            className="w-full px-4 py-3 bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {addingToCart ? "Adding..." : "Add to Cart"}
-          </button>
+          {/* PRIMARY CTA - Buy It Now (Dominant) */}
+          <div className="flex flex-col gap-4 pt-2">
+            <button className="w-full px-6 py-3 shadow-lg font-montserrat bg-[#C9B27B] text-black font-bold text-lg rounded hover:bg-[#b5a265] transition cursor-pointer max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none">
+              Buy It Now
+            </button>
 
-          {/* Secondary CTAs */}
-          <div className="grid grid-cols-2 gap-3">
-            <button className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition">
-              Buy Now
-            </button>
-            {/* Share CTA */}
-            <button className="ppx-4 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded hover:bg-gray-50 transition">
-              Share Product
-            </button>
+            {/* SECONDARY - Quantity + Add to Cart (Compact Row) */}
+            <div className="flex gap-2 max-sm:hidden">
+              <div className="flex items-center border border-[#C9B27B] rounded text-[#C9B27B]">
+                <button
+                  onClick={() => {
+                    const newQty = Math.max(1, quantity - 1);
+                    if (isInCart) {
+                      handleQuantityUpdate(newQty);
+                    } else {
+                      setQuantity(newQty);
+                    }
+                  }}
+                  disabled={addingToCart || updatingQuantity || quantity <= 1}
+                  className="px-3 py-3 shadow-lg font-montserrat font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  −
+                </button>
+                <span className="px-3 py-2 font-semibold text-center min-w-[45px] text-sm">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => {
+                    const newQty = Math.min(5, quantity + 1);
+                    if (isInCart) {
+                      handleQuantityUpdate(newQty);
+                    } else {
+                      setQuantity(newQty);
+                    }
+                  }}
+                  disabled={addingToCart || updatingQuantity || quantity >= 5}
+                  className="px-3 py-2 font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  +
+                </button>
+              </div>
+              {!isInCart ? (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addingToCart}
+                  className="flex-1 px-4 py-3 bg-[#C9B27B] shadow-lg font-montserrat text-black font-semibold rounded hover:bg-[#b5a265] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm"
+                >
+                  <LiaShoppingBagSolid className="w-4 h-4" />
+                  {addingToCart ? "Adding..." : "Add to Cart"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => (window.location.href = "/cart")}
+                  className="flex-1 px-4 py-3 shadow-lg font-montserrat bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition cursor-pointer flex items-center justify-center gap-2 text-sm"
+                >
+                  Go to Cart →
+                </button>
+              )}
+            </div>
+
+            {/* MOBILE - Quantity + Add to Cart (Bottom spacing) */}
+            <div className="hidden max-sm:flex gap-2">
+              <div className="flex items-center border border-[#C9B27B] rounded text-[#C9B27B]">
+                <button
+                  onClick={() => {
+                    const newQty = Math.max(1, quantity - 1);
+                    if (isInCart) {
+                      handleQuantityUpdate(newQty);
+                    } else {
+                      setQuantity(newQty);
+                    }
+                  }}
+                  disabled={addingToCart || updatingQuantity || quantity <= 1}
+                  className="px-3 py-2 font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  −
+                </button>
+                <span className="px-3 py-2 font-semibold text-center min-w-[45px] text-sm">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => {
+                    const newQty = Math.min(5, quantity + 1);
+                    if (isInCart) {
+                      handleQuantityUpdate(newQty);
+                    } else {
+                      setQuantity(newQty);
+                    }
+                  }}
+                  disabled={addingToCart || updatingQuantity || quantity >= 5}
+                  className="px-3 py-2 font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  +
+                </button>
+              </div>
+              {!isInCart ? (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addingToCart}
+                  className="px-4 py-2 bg-[#C9B27B] text-white/80 font-semibold rounded hover:bg-[#b5a265] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 text-sm flex-1"
+                >
+                  <LiaShoppingBagSolid className="w-4 h-4" />
+                  {addingToCart ? "Adding..." : "Add"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => (window.location.href = "/cart")}
+                  className="px-4 py-2 bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition cursor-pointer flex items-center justify-center gap-2 text-sm flex-1"
+                >
+                  Go to Cart →
+                </button>
+              )}
+            </div>
+
+            {/* TRUST SIGNAL */}
+            <div className="text-[16px] max-md:text-[14px]  text-white/50 font-quicksand leading-[1.05] text-center">
+              7-day replacement • Secure payments
+              •&nbsp;Free&nbsp;delivery&nbsp;on&nbsp;orders&nbsp;above&nbsp;₹1000
+            </div>
           </div>
 
-          <div className="text-gray-600 whitespace-pre-line">
-            {product.description}
+          {/* Product Details - Below CTA */}
+          <div className="pt-4 border-t border-gray-700 pb-6">
+            {product.description && product.description.trim() && (
+              <div className="text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05]">
+                {product.description}
+              </div>
+            )}
+            <DeliveryCheck />
           </div>
-          <DeliveryCheck />
+
+          {/* Share - BELOW THE FOLD */}
+          <div className="pt-4">
+            <button
+              onClick={handleWhatsAppShare}
+              className="w-full px-4 py-2 border border-gray-500 text-gray-400 font-medium rounded hover:border-green-500 hover:text-green-500 transition flex items-center justify-center gap-2 cursor-pointer text-sm"
+            >
+              <div className="w-[20px] h-[20px]">
+                <img src="/whatsapp.svg" alt="WhatsApp" />
+              </div>
+              Share on WhatsApp
+            </button>
+          </div>
         </div>
       </div>
 

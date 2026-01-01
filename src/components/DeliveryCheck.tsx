@@ -45,19 +45,21 @@ const COD_PINCODES = [
 ];
 
 export default function DeliveryCheck() {
+  const [inputValue, setInputValue] = useState("");
   const [pincode, setPincode] = useState("");
   const [checked, setChecked] = useState(false);
   const [isDeliveryAvailable, setIsDeliveryAvailable] = useState(false);
   const [isCodAvailable, setIsCodAvailable] = useState(false);
 
   const handleCheckDelivery = () => {
-    if (!pincode.trim()) {
+    if (!inputValue.trim()) {
       alert("Please enter a valid pincode");
       return;
     }
 
-    const deliveryAvailable = DELIVERY_PINCODES.includes(pincode);
-    const codAvailable = COD_PINCODES.includes(pincode);
+    setPincode(inputValue);
+    const deliveryAvailable = DELIVERY_PINCODES.includes(inputValue);
+    const codAvailable = COD_PINCODES.includes(inputValue);
 
     setIsDeliveryAvailable(deliveryAvailable);
     setIsCodAvailable(codAvailable);
@@ -71,14 +73,15 @@ export default function DeliveryCheck() {
   };
 
   return (
-    <div className="space-y-6 mt-6 p-6 border rounded-lg bg-gray-50">
+    <div className="space-y-6 max-sm:space-y-4 mt-6 p-6 border border-[#C9B27B] rounded-lg bg-zinc-900 text-[#FFFFFF]/70">
       {/* Delivery Time Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-zinc-700 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <div className="text-blue-600 text-xl">📦</div>
-          <div>
-            <h3 className="font-semibold text-gray-800">Delivery Timeline</h3>
-            <p className="text-sm text-gray-600 mt-1">
+          <div className="flex flex-col gap-3 max-md:gap-2 max-sm:gap-1">
+            <h3 className="text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-montserrat leading-[1.05]">
+              Delivery Timeline
+            </h3>
+            <p className="text-[16px] max-md:text-[14px] text-white/50 font-quicksand leading-[1.05] text-start">
               Standard delivery typically takes{" "}
               <span className="font-semibold">4-5 business days</span> from the
               date of order confirmation.
@@ -88,27 +91,29 @@ export default function DeliveryCheck() {
       </div>
 
       {/* Delivery Check Section */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-gray-800">
+      <div className="space-y-4 max-sm:space-y-2">
+        <h3 className="text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-montserrat leading-[1.05]">
           Check Delivery Availability
         </h3>
 
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Enter your pincode"
-            value={pincode}
-            onChange={(e) => setPincode(e.target.value)}
-            onKeyPress={handleKeyPress}
-            maxLength="6"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#C9B27B] text-black"
-          />
-          <button
-            onClick={handleCheckDelivery}
-            className="px-6 py-2 bg-[#C9B27B] text-black font-semibold rounded-lg hover:bg-[#b5a265] transition"
-          >
-            Check
-          </button>
+        <div className="flex gap-2 max-sm:flex-col">
+          <div className="flex-1 relative flex items-center border-b border-[#C9B27B] py-1 ">
+            <input
+              type="text"
+              placeholder="Enter your pincode"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              maxLength={6}
+              className="w-full px-4 py-2 pr-16  text-white/50 rounded-lg focus:outline-none focus:border-[#C9B27B]"
+            />
+            <button
+              onClick={handleCheckDelivery}
+              className="absolute right-1 px-3 py-1 bg-[#C9B27B] text-black font-bold rounded hover:bg-[#b5a265] transition text-sm"
+            >
+              Check
+            </button>
+          </div>
         </div>
 
         {/* Results */}
@@ -122,51 +127,51 @@ export default function DeliveryCheck() {
                   : "bg-red-50 border border-red-200"
               }`}
             >
-              <div className="text-2xl">
-                {isDeliveryAvailable ? "✅" : "❌"}
-              </div>
               <div>
-                <p className="font-semibold text-gray-800">
+                <p className="font-semibold text-gray-800 text-[20px] max-sm:text-[14px] max-md:text-[17px] font-monserrat">
                   {isDeliveryAvailable
                     ? "We Deliver to Your Area"
-                    : "Delivery Not Available"}
+                    : "Delivery Unavailable"}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-[16px] max-md:text-[14px] font-quicksand text-gray-600">
                   {isDeliveryAvailable
                     ? `Pincode ${pincode} is in our delivery zone`
-                    : `Sorry, we don't deliver to pincode ${pincode} yet`}
+                    : `We regret to inform you that delivery is not currently available to pincode  ${pincode}. We apologize for the inconvenience and appreciate your understanding.`}
                 </p>
               </div>
             </div>
 
-            {/* COD Result */}
-            <div
-              className={`p-4 rounded-lg flex items-center gap-3 ${
-                isCodAvailable
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-orange-50 border border-orange-200"
-              }`}
-            >
-              <div className="text-2xl">{isCodAvailable ? "💳" : "⚠️"}</div>
-              <div>
-                <p className="font-semibold text-gray-800">
-                  {isCodAvailable ? "COD Available" : "COD Not Available"}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {isCodAvailable
-                    ? "Cash on Delivery is available for your area"
-                    : "Only online payment available for this area"}
-                </p>
+            {/* COD Result - Only show if delivery is available */}
+            {isDeliveryAvailable && (
+              <div
+                className={`p-4 rounded-lg flex items-center gap-3 ${
+                  isCodAvailable
+                    ? "bg-green-200 border border-green-200"
+                    : "bg-orange-50 border border-orange-200"
+                }`}
+              >
+                <div>
+                  <p className="font-semibold text-gray-800 text-[20px] max-sm:text-[14px] max-md:text-[17px] font-monserrat">
+                    {isCodAvailable ? "COD Available" : "COD Not Available"}
+                  </p>
+                  <p className="text-[16px] max-md:text-[14px] font-quicksand text-gray-600">
+                    {isCodAvailable
+                      ? "Cash on Delivery is available for your area"
+                      : "Only online payment available for this area"}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Info Box */}
-      <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 text-sm text-gray-700">
-        <p className="font-semibold mb-2">Note:</p>
-        <ul className="list-disc list-inside space-y-1 text-gray-600">
+      <div className="  p-4 text-sm text-gray-600">
+        <p className="text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-montserrat leading-[1.05] mb-2">
+          Note:
+        </p>
+        <ul className="list-disc list-inside space-y-1 text-white/50 text-[16px] max-md:text-[14px] font-quicksand">
           <li>
             Delivery times may vary based on location and order complexity
           </li>

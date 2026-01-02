@@ -4,6 +4,7 @@ import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { IoStar } from "react-icons/io5";
 
 interface Product {
   id: string;
@@ -28,9 +29,17 @@ interface Product {
     edges: Array<{
       node: {
         id: string;
+        compareAtPrice?: {
+          amount: string;
+        };
       };
     }>;
   };
+}
+
+interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
 }
 
 export default function ProductList() {
@@ -43,10 +52,30 @@ export default function ProductList() {
   const [itemsPerView, setItemsPerView] = useState(4); // Default for desktop
   const [dragStart, setDragStart] = useState(0);
   const [dragEnd, setDragEnd] = useState(0);
+  const [reviewStats, setReviewStats] = useState<Map<string, ReviewStats>>(
+    new Map()
+  );
 
   const navigate = (url: string) => {
     // Simple client-side navigation for environments without Router hooks
     window.location.href = url;
+  };
+
+  // Fetch reviews for a specific product
+  const fetchProductReviews = async (productId: string) => {
+    try {
+      const response = await fetch(
+        `/api/reviews/${encodeURIComponent(productId)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.stats) {
+          setReviewStats((prev) => new Map(prev).set(productId, data.stats));
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to fetch reviews for product ${productId}:`, error);
+    }
   };
 
   // Fetch cart to get variant IDs of items in cart
@@ -75,7 +104,15 @@ export default function ProductList() {
         console.log("Fetching products from /api/products");
         const response = await fetch("/api/products");
         const data = await response.json();
-        setProducts(data.products?.edges?.map((edge: any) => edge.node) || []);
+        const fetchedProducts =
+          data.products?.edges?.map((edge: any) => edge.node) || [];
+        setProducts(fetchedProducts);
+
+        // Fetch reviews for all products
+        fetchedProducts.forEach((product: Product) => {
+          fetchProductReviews(product.id);
+        });
+
         console.log("Fetched products:", data);
       } catch (err) {
         setError("Failed to load products");
@@ -205,7 +242,7 @@ export default function ProductList() {
                       <Link
                         key={product.id}
                         href={`/products/${encodeURIComponent(product.id)}`}
-                        className="slide-animation bg-white dark:bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full"
+                        className="slide-animation bg-white dark:bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full "
                       >
                         {product.images.edges[0] && (
                           <div className="relative w-full h-40 sm:h-48 bg-gray-200 overflow-hidden">
@@ -216,7 +253,7 @@ export default function ProductList() {
                                 product.title
                               }
                               fill
-                              className="object-cover hover:scale-110 transition duration-300"
+                              className="object-cover hover:scale-110 transition duration-300 "
                             />
                           </div>
                         )}
@@ -224,17 +261,77 @@ export default function ProductList() {
                           <h3 className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-1 font-montserrat">
                             {product.title}
                           </h3>
+
+                          {/* Star Rating */}
+                          {reviewStats.has(product.id) && (
+                            <div className="flex items-center gap-1 mb-2">
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => {
+                                  const stats = reviewStats.get(product.id)!;
+                                  const fillPercentage = Math.max(
+                                    0,
+                                    Math.min(1, stats.averageRating - i)
+                                  );
+                                  return (
+                                    <div key={i} className="relative">
+                                      <IoStar
+                                        size={14}
+                                        className="text-gray-400"
+                                      />
+                                      <div
+                                        className="absolute top-0 left-0 overflow-hidden"
+                                        style={{
+                                          width: `${fillPercentage * 100}%`,
+                                        }}
+                                      >
+                                        <IoStar
+                                          size={14}
+                                          className="text-yellow-400"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {reviewStats
+                                  .get(product.id)
+                                  ?.averageRating.toFixed(1) || "0"}{" "}
+                                (
+                                {reviewStats.get(product.id)?.totalReviews || 0}
+                                )
+                              </span>
+                            </div>
+                          )}
+
                           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 flex-1 font-quicksand">
                             {product.description}
                           </p>
 
                           {/* Price and Button */}
                           <div className="flex flex-col gap-2 ">
-                            <span className="font-bold text-sm sm:text-base">
-                              {product.priceRange.minVariantPrice.currencyCode}{" "}
-                              {product.priceRange.minVariantPrice.amount}
-                              {/* add current price here */}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm sm:text-base">
+                                {
+                                  product.priceRange.minVariantPrice
+                                    .currencyCode
+                                }{" "}
+                                {product.priceRange.minVariantPrice.amount}
+                              </span>
+                              {product.variants.edges[0]?.node?.compareAtPrice
+                                ?.amount &&
+                                parseFloat(
+                                  product.variants.edges[0]?.node
+                                    ?.compareAtPrice?.amount
+                                ) != 0 && (
+                                  <span className="text-xs sm:text-sm line-through text-gray-500">
+                                    {
+                                      product.variants.edges[0]?.node
+                                        ?.compareAtPrice?.amount
+                                    }
+                                  </span>
+                                )}
+                            </div>
                             <button
                               onClick={(e) => {
                                 e.preventDefault();

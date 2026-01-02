@@ -2,6 +2,7 @@
 import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { IoStar } from "react-icons/io5";
 import { LiaShoppingBagSolid } from "react-icons/lia";
 import DeliveryCheck from "./DeliveryCheck";
 import ReviewSection from "./ReviewSection";
@@ -48,6 +49,10 @@ export default function SingleProductLanding({ id }: Props) {
   const [isInCart, setIsInCart] = useState(false);
   const [cartLineId, setCartLineId] = useState<string | null>(null);
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
+  const [reviewStats, setReviewStats] = useState<any>({
+    averageRating: 0,
+    totalReviews: 0,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -66,6 +71,19 @@ export default function SingleProductLanding({ id }: Props) {
           if (product?.variants?.edges?.[0]?.node?.id) {
             await checkIfInCart(product.variants.edges[0].node.id);
           }
+        }
+
+        // Fetch review stats
+        try {
+          const reviewRes = await fetch(
+            `/api/reviews/${encodeURIComponent(id)}`
+          );
+          const reviewData = await reviewRes.json();
+          if (reviewRes.ok && reviewData.stats) {
+            setReviewStats(reviewData.stats);
+          }
+        } catch (reviewErr) {
+          console.error("Failed to fetch review stats:", reviewErr);
         }
       } catch (err: any) {
         console.error("SingleProductLanding: Fetch error:", err);
@@ -263,12 +281,40 @@ export default function SingleProductLanding({ id }: Props) {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-2">
           <div>
             <h1 className="font-montserrat text-white/90 tracking-tight leading-tight font-normal text-[44px] max-sm:text-[28px] max-md:text-[35px]">
               {product.title}
             </h1>
           </div>
+
+          {/* Review Stars */}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => {
+                const fillPercentage = Math.max(
+                  0,
+                  Math.min(1, reviewStats.averageRating - i)
+                );
+                return (
+                  <div key={i} className="relative">
+                    <IoStar size={20} className="text-gray-600" />
+                    <div
+                      className="absolute top-0 left-0 overflow-hidden"
+                      style={{ width: `${fillPercentage * 100}%` }}
+                    >
+                      <IoStar size={20} className="text-[#C9B27B]" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <span className="text-gray-400 text-sm">
+              {reviewStats.averageRating.toFixed(1)} ({reviewStats.totalReviews}{" "}
+              reviews)
+            </span>
+          </div>
+
           <div className="flex gap-2 items-center">
             <div
               className="font-montserrat font-normal tracking-tight
@@ -295,7 +341,7 @@ export default function SingleProductLanding({ id }: Props) {
 
           {/* PRIMARY CTA - Buy It Now (Dominant) */}
           <div className="flex flex-col gap-4 pt-2">
-            <button className="w-full px-6 py-3 shadow-lg font-montserrat bg-[#C9B27B] text-black font-bold text-lg rounded hover:bg-[#b5a265] transition cursor-pointer max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none">
+            <button className="max-sm:z-10 w-full px-6 py-3 shadow-lg font-montserrat bg-[#C9B27B] text-black font-bold text-lg rounded hover:bg-[#b5a265] transition cursor-pointer max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none">
               Buy It Now
             </button>
 
@@ -415,7 +461,7 @@ export default function SingleProductLanding({ id }: Props) {
           </div>
 
           {/* Product Details - Below CTA */}
-          <div className="pt-4 border-t border-gray-700 pb-6">
+          <div className="pt-4 border-t border-gray-700 pb-6 max-sm:pb-1">
             {product.description && product.description.trim() && (
               <div className="text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05]">
                 {product.description}
@@ -425,7 +471,7 @@ export default function SingleProductLanding({ id }: Props) {
           </div>
 
           {/* Share - BELOW THE FOLD */}
-          <div className="pt-4">
+          <div className="pt-4 max-sm:pt-1">
             <button
               onClick={handleWhatsAppShare}
               className="w-full px-4 py-2 border border-gray-500 text-gray-400 font-medium rounded hover:border-green-500 hover:text-green-500 transition flex items-center justify-center gap-2 cursor-pointer text-sm"

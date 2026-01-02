@@ -37,9 +37,9 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 font-quicksand text-[20px] h-[84px] max-sm:h-[70px] ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 font-quicksand text-[20px] h-[84px] max-sm:h-auto max-sm:top-0 ${
           scrolled
-            ? "bg-[#080808]/95 backdrop-blur-lg shadow-md text-slate-900"
+            ? "bg-black/90 backdrop-blur-lg shadow-md text-white"
             : "bg-transparent text-white"
         }`}
         aria-label="Main navigation"
@@ -109,10 +109,10 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div
-          className={`fixed top-[84px] left-0 right-0 z-40 transition-all duration-200 md:hidden ${
+          className={`fixed top-0 left-0 right-0 z-40 transition-all duration-200 md:hidden pt-[70px] ${
             scrolled
-              ? "bg-white/95 backdrop-blur-lg text-slate-900"
-              : "bg-black/90 text-white"
+              ? "bg-black backdrop-blur-lg text-white"
+              : "bg-black text-white"
           }`}
         >
           <ul className="flex flex-col gap-4 px-6 py-6">
@@ -134,22 +134,6 @@ export default function Navbar() {
                 </li>
               );
             })}
-            <li>
-              <button
-                onClick={() => {
-                  handleCartClick();
-                  setMobileMenuOpen(false);
-                }}
-                className="font-medium transition-colors block py-2 hover:text-[#FFFFFF] opacity-75 text-left relative"
-              >
-                Cart
-                {cartItemCount > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {cartItemCount > 9 ? "9+" : cartItemCount}
-                  </span>
-                )}
-              </button>
-            </li>
           </ul>
         </div>
       )}

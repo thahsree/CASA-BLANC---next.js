@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IoStar } from "react-icons/io5";
 
 interface Review {
   _id: string;
@@ -159,19 +160,24 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
             {stats.averageRating.toFixed(1)}
           </div>
           <div>
-            <div className="flex gap-1">
-              {[...Array(5)].map((_, i) => (
-                <span
-                  key={i}
-                  className={
-                    i < Math.round(stats.averageRating)
-                      ? "text-yellow-400 text-xl"
-                      : "text-gray-300 text-xl"
-                  }
-                >
-                  ★
-                </span>
-              ))}
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => {
+                const fillPercentage = Math.max(
+                  0,
+                  Math.min(1, stats.averageRating - i)
+                );
+                return (
+                  <div key={i} className="relative">
+                    <IoStar size={24} className="text-gray-300" />
+                    <div
+                      className="absolute top-0 left-0 overflow-hidden"
+                      style={{ width: `${fillPercentage * 100}%` }}
+                    >
+                      <IoStar size={24} className="text-yellow-400" />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <p className="text-gray-400">{stats.totalReviews} reviews</p>
           </div>

@@ -29,7 +29,7 @@ export default function CartSkeleton() {
 
           {/* Total price skeleton */}
           <div className="text-right space-y-1">
-            <div className="h-5 bg-gray-400 rounded w-20" />
+            <div className="h-5 bg-gray-400 rounded w-20 " />
           </div>
         </div>
       ))}

@@ -25,26 +25,19 @@ const PRODUCT_BY_ID_QUERY = `
   }
 `;
 
-export async function GET(request: NextRequest, context: { params?: { id?: string } } = {}) {
-  // Prefer Next.js provided dynamic param, but fall back to parsing the URL
-  let id = context?.params?.id;
-  if (!id) {
-    const url = new URL(request.url);
-    // Expect path like /api/products/<id>
-    const parts = url.pathname.split('/');
-    id = parts[parts.length - 1] || undefined;
-  }
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: rawId } = await params;
   
-  // Decode in case the ID is URL-encoded (Next.js usually handles this, but be safe)
-  if (id) {
-    id = decodeURIComponent(id);
-  }
-  
-
+  let id = rawId;
   if (!id) {
-    // Return 200 with a structured error so clients don't hard-fail on !res.ok
     return NextResponse.json({ product: null, error: 'Missing product id' });
   }
+  
+  // Decode in case the ID is URL-encoded
+  id = decodeURIComponent(id);
 
   try {
     const res: any = await shopify.request(PRODUCT_BY_ID_QUERY, { id });

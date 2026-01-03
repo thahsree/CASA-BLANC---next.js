@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     domains: ['cdn.shopify.com'],
   },
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;

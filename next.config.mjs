@@ -1,9 +1,8 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   /* config options here */
   images: {
-    domains: ['cdn.shopify.com'],
+    domains: ["cdn.shopify.com"],
   },
   productionBrowserSourceMaps: false,
 };

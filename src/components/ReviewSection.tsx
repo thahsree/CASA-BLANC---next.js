@@ -154,9 +154,9 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
       </h2>
 
       {/* Average Rating */}
-      <div className="mb-8 p-6 rounded-lg bg-zinc-600 ">
+      <div className="my-5 p-6 rounded-lg bg-zinc-600 ">
         <div className="flex items-center gap-4">
-          <div className="text-4xl font-bold">
+          <div className="text-4xl font-bold font-montserrat text-white/90 tracking-tight leading-tight max-sm:text-3xl max-md:text-2xl">
             {stats.averageRating.toFixed(1)}
           </div>
           <div>
@@ -168,12 +168,12 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
                 );
                 return (
                   <div key={i} className="relative">
-                    <IoStar size={24} className="text-gray-300" />
+                    <IoStar className="text-gray-300 text-[16px] sm:text-[20px] md:text-[24px]" />
                     <div
                       className="absolute top-0 left-0 overflow-hidden"
                       style={{ width: `${fillPercentage * 100}%` }}
                     >
-                      <IoStar size={24} className="text-yellow-400" />
+                      <IoStar className="text-yellow-400 text-[16px] sm:text-[20px] md:text-[24px]" />
                     </div>
                   </div>
                 );
@@ -190,7 +190,9 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
           onClick={() => setShowReviewForm(!showReviewForm)}
           className="px-6 py-2 bg-[#C9B27B] text-black font-semibold rounded hover:bg-[#b5a265] transition"
         >
-          {showReviewForm ? "Cancel" : "Write a Review"}
+          <p className="text-lg max-md:text-base max-sm:text-sm">
+            {showReviewForm ? "Cancel" : "Write a Review"}
+          </p>
         </button>
       </div>
 
@@ -252,7 +254,7 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
                     key={star}
                     type="button"
                     onClick={() => setNewReview({ ...newReview, rating: star })}
-                    className={`text-3xl transition ${
+                    className={`text-[24px] sm:text-[28px] md:text-[32px] transition ${
                       star <= newReview.rating
                         ? "text-yellow-400"
                         : "text-gray-300"
@@ -300,19 +302,23 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h4 className="font-semibold">{review.title}</h4>
-                    <p className="text-sm text-gray-400">{review.authorName}</p>
+                    <h4 className="font-semibold text-xl max-md:text-base max-sm:text-sm">
+                      {review.title}
+                    </h4>
+                    <p className="text-base max-md:text-sm max-sm:text-xs text-gray-400">
+                      {review.authorName}
+                    </p>
                   </div>
                   <div className="text-right">
                     <div className="flex gap-1 justify-end mb-1">
                       {[...Array(5)].map((_, i) => (
                         <span
                           key={i}
-                          className={
+                          className={`text-[14px] sm:text-[16px] md:text-[18px] ${
                             i < review.rating
                               ? "text-yellow-400"
                               : "text-gray-500"
-                          }
+                          }`}
                         >
                           ★
                         </span>
@@ -323,7 +329,9 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
                     </p>
                   </div>
                 </div>
-                <p className="text-gray-300">{review.content}</p>
+                <p className="text-gray-300 text-xl max-sm:text-base">
+                  {review.content}
+                </p>
               </div>
             ))}
 

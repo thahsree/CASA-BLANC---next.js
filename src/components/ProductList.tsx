@@ -258,7 +258,7 @@ export default function ProductList() {
                           </div>
                         )}
                         <div className="p-3 sm:p-4 flex flex-col flex-1">
-                          <h3 className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-1 font-montserrat">
+<h3 className="font-semibold max-sm:text-xs max-md:text-sm text-base mb-2 line-clamp-1 font-montserrat">
                             {product.title}
                           </h3>
 
@@ -311,7 +311,7 @@ export default function ProductList() {
                           {/* Price and Button */}
                           <div className="flex flex-col gap-2 ">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm sm:text-base">
+                              <span className="font-bold text-xs sm:text-sm md:text-base">
                                 {
                                   product.priceRange.minVariantPrice
                                     .currencyCode

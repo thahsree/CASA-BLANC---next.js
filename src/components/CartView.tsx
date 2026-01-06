@@ -129,7 +129,7 @@ export default function CartView() {
             />
           )}
           <div className="flex-1">
-            <div className="font-semibold">
+            <div className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-2 font-montserrat">
               {line.merchandise?.product?.title || "Product"}
             </div>
             <div className="text-sm text-gray-500 mb-2 mt-1">
@@ -169,10 +169,17 @@ export default function CartView() {
                 Remove
               </button>
             </div>
+            {/* Total Price for this item */}
+            <div className="hidden text-right max-sm:block mt-4">
+              <div className="font-semibold">
+                {line.cost?.totalAmount?.currencyCode}{" "}
+                {line.cost?.totalAmount?.amount}
+              </div>
+            </div>
           </div>
 
           {/* Total Price for this item */}
-          <div className="text-right">
+          <div className="text-right max-sm:hidden">
             <div className="font-semibold">
               {line.cost?.totalAmount?.currencyCode}{" "}
               {line.cost?.totalAmount?.amount}

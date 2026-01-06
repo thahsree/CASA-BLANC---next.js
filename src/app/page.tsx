@@ -1,6 +1,7 @@
 import CasaFaq from "@/components/CasaFaq";
 import Hero from "@/components/Hero";
 import ProductList from "@/components/ProductList";
+import ShoppingBenefits from "@/components/ShoppingBenefits";
 import Subscription from "@/components/Subscription";
 import TrustSection from "@/components/TrustSection";
 
@@ -21,6 +22,7 @@ export default function Home() {
         </div>
         <ProductList />
       </div>
+      <ShoppingBenefits />
       <Subscription />
     </main>
   );

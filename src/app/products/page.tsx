@@ -35,7 +35,7 @@ export default function ProductsPage() {
           </p>
         </div>
       </section>
-      <div className="mt-24 max-sm:mt-10 px-8 max-md:px-4 max-sm-px-2">
+      <div className="mt-24 max-sm:mt-10 px-8 max-md:px-4 max-sm-px-2 py-16 max-md:py-12 max-sm:py-8 ">
         <ProductLanding />
       </div>
     </main>

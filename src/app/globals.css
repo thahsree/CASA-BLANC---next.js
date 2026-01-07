@@ -17,6 +17,7 @@
   --font-quicksand: "Quicksand", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-abel: "Abel", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-ivymode: "Ivymode", Georgia, serif;
+  --font-montserrat: "Poppins", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,4 +31,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif);
+}
+
+select {
+  background-color: transparent;
+  color: white/90;
+}
+select option {
+  background-color: white;
+  color: #000;
+}
+
+select option:checked {
+  background: #C9B27B;
+  color: #000;
 }

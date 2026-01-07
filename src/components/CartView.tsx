@@ -129,7 +129,7 @@ export default function CartView() {
             />
           )}
           <div className="flex-1">
-            <div className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-2 font-montserrat">
+            <div className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-2 font-montserrat text-white/90">
               {line.merchandise?.product?.title || "Product"}
             </div>
             <div className="text-sm text-gray-500 mb-2 mt-1">

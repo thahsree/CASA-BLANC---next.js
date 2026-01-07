@@ -99,7 +99,7 @@ export default function ProductCard({
       )}
 
       <div className="p-4 max-md:p-3 max-sm:p-2 flex flex-col flex-grow">
-        <h3 className="text-lg mb-1 max-md:text-base max-sm:text-sm leading-tight font-montserrat font-medium line-clamp-1">
+        <h3 className="text-lg mb-1 max-md:text-base max-sm:text-sm leading-tight font-montserrat font-medium line-clamp-1 text-white/90">
           {product.title}
         </h3>
         <p className="text-base max-md:text-sm text-gray-600 line-clamp-2 flex-grow font-quicksand max-sm:text-xs">

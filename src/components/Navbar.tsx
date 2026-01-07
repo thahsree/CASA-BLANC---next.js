@@ -89,17 +89,19 @@ export default function Navbar() {
           <div className="flex items-center gap-10 md:min-w-[250px] justify-end text-white opacity-75 max-md:gap-7 max-sm:gap-5">
             <button
               onClick={handleCartClick}
-              className="relative hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF] transition-opacity"
+              className="relative hover:opacity-75 w-[30px] h-[30px] max-md:h-[25px]  max-sm:w-6 max-sm:h-6  cursor-pointer hover:text-[#FFFFFF] transition-opacity"
             >
               <LiaShoppingBagSolid className="w-full h-full" />
               {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartItemCount > 9 ? "9+" : cartItemCount}
+                <span className="absolute -top-2 -right-2 max-sm:-top-1 text-center bg-red-500  rounded-full w-5 h-5 max-sm:w-4 max-sm:h-4 flex items-center justify-center ">
+                  <p className="max-sm:text-[10px] text-white text-xs font-bold ">
+                    {cartItemCount > 9 ? "9+" : cartItemCount}
+                  </p>
                 </span>
               )}
             </button>
             {/* profile */}
-            <button className="hover:opacity-75 w-[24] h-[24] cursor-pointer hover:text-[#FFFFFF]">
+            <button className="hover:opacity-75  w-[30px] h-[30px]  max-md:w-[25px] max-md:h-[25px]  max-sm:w-6 max-sm:h-6 cursor-pointer hover:text-[#FFFFFF]">
               <LiaPersonBoothSolid className="w-full h-full" />
             </button>
           </div>

@@ -8,11 +8,13 @@ import "./globals.css";
 const interSans = Inter({
   variable: "--font-inter-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const robotoMono = Roboto_Mono({
   variable: "--font-roboto-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

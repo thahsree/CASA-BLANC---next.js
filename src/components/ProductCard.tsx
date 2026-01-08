@@ -136,7 +136,7 @@ export default function ProductCard({
 
         <div className=" bg-zinc-900 rounded-lg mt-3 flex flex-col items-start gap-2 justify-between w-full">
           <div className="flex items-center gap-2 w-full">
-            <div className="font-bold text-base max-md:text-sm text-[FFFFFF]/70">
+            <div className="font-bold text-base max-md:text-sm text-white/80">
               INR. {product.priceRange?.minVariantPrice?.amount}
             </div>
             {compareAtPrice && compareAtPrice != 0 && (

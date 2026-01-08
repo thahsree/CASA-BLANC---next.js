@@ -341,8 +341,31 @@ export default function SingleProductLanding({ id }: Props) {
 
           {/* PRIMARY CTA - Buy It Now (Dominant) */}
           <div className="flex flex-col gap-4 pt-2">
-            <button className="max-sm:z-10 w-full px-6 py-3 shadow-lg font-montserrat bg-[#C9B27B] text-black font-bold text-lg rounded hover:bg-[#b5a265] transition cursor-pointer max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none">
-              Buy It Now
+            <button className="max-sm:z-10 w-full px-6 py-3 shadow-lg font-montserrat bg-[#D4AF6F] text-black font-bold text-lg rounded hover:bg-[#C9B27B] transition cursor-pointer max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none max-sm:flex max-sm:items-center max-sm:justify-between max-sm:py-4 max-sm:px-4 max-sm:gap-3">
+              {/* Mobile: Product info */}
+              <div className="hidden max-sm:flex items-center gap-3">
+                {product.images?.edges?.[0]?.node?.url && (
+                  <img
+                    src={product.images.edges[0].node.url}
+                    alt={product.title}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                )}
+                <div className="text-left">
+                  <p className="text-xs font-semibold line-clamp-1">
+                    {product.title}
+                  </p>
+                  <p className="text-sm font-bold">
+                    ₹{" "}
+                    {parseFloat(
+                      product.priceRange?.minVariantPrice?.amount
+                    ).toFixed(0)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Buy Now text (right side on mobile) */}
+              <span>Buy Now</span>
             </button>
 
             {/* SECONDARY - Quantity + Add to Cart (Compact Row) */}

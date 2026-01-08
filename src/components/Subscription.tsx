@@ -1,6 +1,6 @@
 const Subscription = ({ image = "/kitchen2.png" }) => {
   return (
-    <section className="relative w-full h-[70vh] max-md:h-[50vh] max-sm:h-[40vh] mt-32 max-md:mt-16 max-sm:mt-10">
+    <section className="relative w-full h-[70vh] max-md:h-[50vh] max-sm:h-[40vh] mt-32 max-md:mt-16">
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -13,7 +13,7 @@ const Subscription = ({ image = "/kitchen2.png" }) => {
       <div className="relative z-10 flex items-center justify-center h-full px-8 md:px-12 max-sm:px-1 max-md:px-4">
         <div className="relative z-10 flex items-center justify-center h-full px-6 w-full">
           <div className="text-center space-y-5 max-sm:space-y-3 max-md:space-y-4 w-full flex flex-col items-center max-sm:items-start">
-            <p className="text-white/60 tracking-[0.3em] uppercase text-[20px] max-sm:text-[10px] max-md:text-[17px] font-montserrat leading-[1.05]">
+            <p className="text-white/60 tracking-[0.3em] uppercase text-[20px] max-sm:text-[12px] max-md:text-[17px] font-montserrat leading-[1.05]">
               Exclusive for Subscribers
             </p>
 
@@ -21,9 +21,8 @@ const Subscription = ({ image = "/kitchen2.png" }) => {
               Upgrade Your Everyday Living.
             </h2>
 
-            <p className="max-w-3xl text-center text-[20px] max-sm:text-[10px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05] max-sm:text-left">
-              Get early access to premium kitchen & home essentials — built for
-              Indian cooking, modern design, and everyday use.
+            <p className="max-w-3xl text-center text-[20px] max-sm:text-[12px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05] max-sm:text-left">
+              Get early access to premium kitchen & home essentials.
             </p>
 
             <div className="pt-3 flex justify-center">
@@ -44,7 +43,7 @@ const Subscription = ({ image = "/kitchen2.png" }) => {
               </div>
             </div>
 
-            <p className="text-white/50 text-sm max-sm:text-xs max-md:text-sm font-quicksand leading-[1.05]">
+            <p className="text-white/50 text-base max-sm:text-xs max-md:text-sm font-quicksand leading-[1.05]">
               No spam. Unsubscribe anytime.
             </p>
           </div>

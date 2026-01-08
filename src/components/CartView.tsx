@@ -132,7 +132,7 @@ export default function CartView() {
             <div className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-2 font-montserrat text-white/90">
               {line.merchandise?.product?.title || "Product"}
             </div>
-            <div className="text-sm text-gray-500 mb-2 mt-1">
+            <div className="text-sm text-white/90 mb-2 mt-1">
               Price: {line.cost?.totalAmount.currencyCode}{" "}
               {line.quantity > 0
                 ? (line.cost?.totalAmount.amount / line.quantity).toFixed(2)
@@ -171,7 +171,7 @@ export default function CartView() {
             </div>
             {/* Total Price for this item */}
             <div className="hidden text-right max-sm:block mt-4">
-              <div className="font-semibold">
+              <div className="font-semibold text-white/90">
                 {line.cost?.totalAmount?.currencyCode}{" "}
                 {line.cost?.totalAmount?.amount}
               </div>
@@ -180,7 +180,7 @@ export default function CartView() {
 
           {/* Total Price for this item */}
           <div className="text-right max-sm:hidden">
-            <div className="font-semibold">
+            <div className="font-semibold text-white/90">
               {line.cost?.totalAmount?.currencyCode}{" "}
               {line.cost?.totalAmount?.amount}
             </div>
@@ -189,8 +189,8 @@ export default function CartView() {
       ))}
 
       <div className="flex justify-between items-center pt-4 border-t">
-        <div className="text-lg font-semibold">Total</div>
-        <div className="text-xl font-bold">
+        <div className="text-lg font-semibold text-white/90">Total</div>
+        <div className="text-xl font-bold text-white/90">
           {cart.cost?.totalAmount?.currencyCode}{" "}
           {cart.cost?.totalAmount?.amount}
         </div>

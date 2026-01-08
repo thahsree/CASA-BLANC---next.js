@@ -10,7 +10,7 @@ const Subscription = ({ image = "/kitchen2.png" }) => {
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent md:from-black/70 md:via-black/40" />
 
-      <div className="relative z-10 flex items-center justify-center h-full px-8 md:px-12">
+      <div className="relative z-10 flex items-center justify-center h-full px-8 md:px-12 max-sm:px-1 max-md:px-4">
         <div className="relative z-10 flex items-center justify-center h-full px-6 w-full">
           <div className="text-center space-y-5 max-sm:space-y-3 max-md:space-y-4 w-full flex flex-col items-center max-sm:items-start">
             <p className="text-white/60 tracking-[0.3em] uppercase text-[20px] max-sm:text-[10px] max-md:text-[17px] font-montserrat leading-[1.05]">
@@ -31,7 +31,7 @@ const Subscription = ({ image = "/kitchen2.png" }) => {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="w-[300px] max-sm:w-[150px] max-md:w-[250px] flex-1 px-4 py-3 text-black outline-none max-sm:px-1 max-sm:py-2 max-md:px-3 max-md:py-2 font-quicksand text-[16px] max-sm:text-[12px] max-md:text-[14px]"
+                  className="w-[300px] max-sm:w-[200px] max-md:w-[250px] flex-1 px-4 py-3 text-black outline-none max-sm:px-1 max-sm:py-2 max-md:px-3 max-md:py-2 font-quicksand text-[16px] max-sm:text-[12px] max-md:text-[14px]"
                 />
                 <button
                   className="inline-block bg-[#C9B27B] text-[#111111] text-lg max-sm:text-xs max-md:text-sm

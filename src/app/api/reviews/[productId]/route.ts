@@ -24,48 +24,86 @@ export async function GET(
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    // Fetch published reviews for this product, sorted by newest first
-    const reviews = await Review.find({
+    const query = {
       productId,
       published: true,
-    })
+    };
+
+    // Fetch paginated reviews for this product, sorted by newest first
+    const reviews = await Review.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean();
+      .lean()
+      .maxTimeMS(8000);
 
-    // Get all reviews for stats calculation
-    const allReviews = await Review.find({
-      productId,
-      published: true,
-    }).lean();
+    // Get total count and calculate stats more efficiently
+    const totalReviews = await Review.countDocuments(query)
+      .maxTimeMS(8000);
+    
+    // Get stats with timeout
+    let stats = {
+      totalReviews: 0,
+      averageRating: 0,
+      rating1: 0,
+      rating2: 0,
+      rating3: 0,
+      rating4: 0,
+      rating5: 0,
+    };
 
-    // Calculate average rating
-    const avgRating =
-      allReviews.length > 0
-        ? (allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length).toFixed(2)
-        : 0;
+    if (totalReviews > 0) {
+      try {
+        const statsResult = await Review.aggregate([
+          { $match: query },
+          {
+            $group: {
+              _id: null,
+              totalReviews: { $sum: 1 },
+              averageRating: { $avg: "$rating" },
+              rating1: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
+              rating2: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
+              rating3: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
+              rating4: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
+              rating5: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
+            },
+          },
+        ]);
+        
+        stats = statsResult[0] || stats;
+      } catch (statsError) {
+        console.warn("Stats calculation timed out, using basic calculation", statsError);
+        // Fallback to simple calculation
+        const allRatings = reviews.map((r) => r.rating);
+        stats.totalReviews = totalReviews;
+        stats.averageRating = allRatings.length > 0 
+          ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length 
+          : 0;
+      }
+    }
+
+    const avgRating = stats.averageRating?.toFixed(2) || "0";
 
     return NextResponse.json({
       success: true,
       productId,
       data: reviews,
       stats: {
-        totalReviews: allReviews.length,
-        averageRating: parseFloat(avgRating as string),
+        totalReviews,
+        averageRating: parseFloat(avgRating),
         ratingDistribution: {
-          1: allReviews.filter((r) => r.rating === 1).length,
-          2: allReviews.filter((r) => r.rating === 2).length,
-          3: allReviews.filter((r) => r.rating === 3).length,
-          4: allReviews.filter((r) => r.rating === 4).length,
-          5: allReviews.filter((r) => r.rating === 5).length,
+          1: stats.rating1 || 0,
+          2: stats.rating2 || 0,
+          3: stats.rating3 || 0,
+          4: stats.rating4 || 0,
+          5: stats.rating5 || 0,
         },
       },
       pagination: {
         page,
         limit,
-        total: allReviews.length,
-        pages: Math.ceil(allReviews.length / limit),
+        total: totalReviews,
+        pages: Math.ceil(totalReviews / limit),
       },
     });
   } catch (error) {

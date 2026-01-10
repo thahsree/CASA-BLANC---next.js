@@ -102,7 +102,7 @@ export default function ProductCard({
         <h3 className="text-lg mb-1 max-md:text-base max-sm:text-sm leading-tight font-montserrat font-medium line-clamp-1 text-white/90">
           {product.title}
         </h3>
-        <p className="text-base max-md:text-sm text-gray-600 line-clamp-2 flex-grow font-quicksand max-sm:text-xs">
+        <p className="text-base max-md:text-sm max-sm:text-xs text-gray-600 line-clamp-2 flex-grow font-quicksand ">
           {product.description}
         </p>
 
@@ -136,12 +136,12 @@ export default function ProductCard({
 
         <div className=" bg-zinc-900 rounded-lg mt-3 flex flex-col items-start gap-2 justify-between w-full">
           <div className="flex items-center gap-2 w-full">
-            <div className="font-bold text-base max-md:text-sm text-white/80">
+            <div className="font-bold text-lg mb-1 max-md:text-base max-sm:text-sm text-white/80">
               INR. {product.priceRange?.minVariantPrice?.amount}
             </div>
             {compareAtPrice && compareAtPrice != 0 && (
-              <div className="font-extralight text-base max-md:text-sm line-through text-gray-500">
-                INR. {compareAtPrice}
+              <div className="font-light text-lg mb-1 max-md:text-base max-sm:text-sm line-through text-gray-500">
+                {compareAtPrice}
               </div>
             )}
           </div>

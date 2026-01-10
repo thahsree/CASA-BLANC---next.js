@@ -1,6 +1,6 @@
 export default function ProductSkeleton() {
   return (
-    <div className="grid grid-cols-4 max-md:grid-cols-3 max-sm:grid-cols-2 gap-6 max-sm:gap-1 max-md:gap-4">
+    <div className="grid grid-cols-4 max-md:grid-cols-3 max-sm:grid-cols-2 gap-6 max-sm:gap-2 max-md:gap-4">
       {[...Array(4)].map((_, index) => (
         <div
           key={index}

@@ -257,8 +257,8 @@ export default function ProductList() {
                             />
                           </div>
                         )}
-                        <div className="p-3 sm:p-4 flex flex-col flex-1">
-<h3 className="font-semibold max-sm:text-xs max-md:text-sm text-base mb-2 line-clamp-1 font-montserrat">
+                        <div className="p-3 sm:p-4 flex flex-col flex-1 max-sm:p-1">
+                          <h3 className="font-semibold text-lg max-md:text-base max-sm:text-sm  mb-2 line-clamp-1 font-montserrat">
                             {product.title}
                           </h3>
 
@@ -304,14 +304,14 @@ export default function ProductList() {
                             </div>
                           )}
 
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 flex-1 font-quicksand">
+                          <p className="text-base max-md:text-sm max-sm:text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 flex-1 font-quicksand">
                             {product.description}
                           </p>
 
                           {/* Price and Button */}
                           <div className="flex flex-col gap-2 ">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs sm:text-sm md:text-base">
+                              <span className="font-bold text-lg mb-1 max-md:text-base max-sm:text-sm">
                                 {
                                   product.priceRange.minVariantPrice
                                     .currencyCode
@@ -324,7 +324,7 @@ export default function ProductList() {
                                   product.variants.edges[0]?.node
                                     ?.compareAtPrice?.amount
                                 ) != 0 && (
-                                  <span className="text-xs sm:text-sm line-through text-gray-500">
+                                  <span className="font-light text-lg mb-1 max-md:text-base max-sm:text-sm line-through text-gray-500">
                                     {
                                       product.variants.edges[0]?.node
                                         ?.compareAtPrice?.amount

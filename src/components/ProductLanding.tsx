@@ -115,7 +115,7 @@ export default function ProductLanding() {
 
   if (loading)
     return (
-      <div className="px-5 max-sm:px-2">
+      <div className="">
         {/* Sorting Controls */}
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3 max-md:gap-2 max-sm:gap-1">
@@ -135,7 +135,7 @@ export default function ProductLanding() {
               }}
               className="px-4 py-2 max-md:px-2 max-md:py-1 max-sm:px-1 border border-gray-300 rounded-lg font-quicksand focus:outline-none focus:ring-2 focus:ring-[#C9B27B] text-lg max-md:text-base max-sm:text-sm"
             >
-              <option value="popularity">popularity</option>
+              <option value="popularity">Popularity</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
             </select>
@@ -247,7 +247,7 @@ export default function ProductLanding() {
   };
 
   return (
-    <div className="px-5 max-sm:px-2">
+    <div className="">
       {/* Sorting Controls */}
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3 max-md:gap-2 max-sm:gap-1">
@@ -284,7 +284,7 @@ export default function ProductLanding() {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-4 [@media(min-width:642px)_and_(max-width:1042px)]:grid-cols-3 max-md:grid-cols-3 max-sm:grid-cols-2 gap-6 max-md:gap-3 max-sm:gap-x-1 max-sm:gap-y-5 max-md:gap-y-4">
+      <div className="grid grid-cols-4 [@media(min-width:642px)_and_(max-width:1042px)]:grid-cols-3 max-md:grid-cols-3 max-sm:grid-cols-2 gap-6 max-md:gap-3 max-sm:gap-x-2 max-sm:gap-y-5 max-md:gap-y-4">
         {paginatedProducts.map((product) => (
           <ProductCard
             key={product.id}

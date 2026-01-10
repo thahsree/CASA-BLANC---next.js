@@ -11,7 +11,7 @@ export default function Home() {
       <Hero />
       <TrustSection />
       <CasaFaq />
-      <div className="w-full  pt-32 max-md:pt-16 py-32 max-md:py-16 opacity-95 px-6 md:px-12 relative overflow-hidden">
+      <div className="w-full  pt-32 max-md:pt-16 py-32 max-md:py-16 opacity-95 px-12 max-md:px-6 max-sm:px-3 relative overflow-hidden">
         <div className="py-8">
           <h1 className="text-[22px] sm:text-[26px] md:text-[32px] font-montserrat font-semibold tracking-normal leading-[1.1] text-white/90">
             Featured Products

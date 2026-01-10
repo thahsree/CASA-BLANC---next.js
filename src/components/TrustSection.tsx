@@ -49,7 +49,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
   }, []);
 
   return (
-    <section className="w-full pt-32 py-32 max-md:py-16 bg-[#080808] opacity-95 text-white px-6 md:px-12 relative overflow-hidden">
+    <section className="w-full pt-32 py-32 max-md:py-16 bg-[#080808] opacity-95 text-white px-12 max-md:px-6 max-sm:px-3 relative overflow-hidden">
       {/* Bokeh background layer (blurred circles) */}
       {/* <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/50 to-transparent md:from-black/70 md:via-black/40" /> */}
 
@@ -57,7 +57,7 @@ const TrustSection = ({ image = "/juicer3.png" }: Props) => {
         {/* Top Section */}
         <div className="grid md:grid-cols-2 gap-12 items-center">
           {/* Product Image with Frame */}
-          <div className="flex justify-center md:justify-start max-md:hidden ">
+          <div className="flex justify-center max-md:hidden">
             <div className=" rounded-md ">
               {/* bg-[#D9C59A] */}
               <img

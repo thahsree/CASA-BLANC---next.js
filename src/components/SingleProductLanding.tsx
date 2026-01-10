@@ -327,8 +327,8 @@ export default function SingleProductLanding({ id }: Props) {
             </div>
             {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount && (
               <div
-                className="font-montserrat font-extralight opacity-60 tracking-tight
-                         text-[35px] max-sm:text-[20px] max-md:text-[28px] line-through text-gray-500"
+                className="font-montserrat font-light opacity-60 tracking-tight
+                         text-[50px] max-sm:text-[28px] max-md:text-[40px] line-through text-gray-500"
               >
                 {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount == 0
                   ? ""
@@ -352,7 +352,7 @@ export default function SingleProductLanding({ id }: Props) {
                   />
                 )}
                 <div className="text-left">
-                  <p className="text-xs font-semibold line-clamp-1">
+                  <p className="text-xs font-semibold line-clamp-2">
                     {product.title}
                   </p>
                   <p className="text-sm font-bold">
@@ -365,7 +365,7 @@ export default function SingleProductLanding({ id }: Props) {
               </div>
 
               {/* Buy Now text (right side on mobile) */}
-              <span>Buy Now</span>
+              <span>Buy&nbsp;Now</span>
             </button>
 
             {/* SECONDARY - Quantity + Add to Cart (Compact Row) */}

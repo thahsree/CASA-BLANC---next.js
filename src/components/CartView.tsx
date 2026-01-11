@@ -1,12 +1,15 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import CartSkeleton from "./CartSkeleton";
 
 // CartView: a small client component that interacts with existing /api/cart
 // API routes to create/add lines and to fetch the cart. Uses session cookies
 // to persist the cart id across page reloads.
 export default function CartView() {
+  const router = useRouter();
   const { updateCartCount } = useCart();
   const [cart, setCart] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +42,7 @@ export default function CartView() {
     if (cart?.checkoutUrl) {
       window.location.href = cart.checkoutUrl;
     } else {
-      alert("Checkout URL not available. Cart may have expired.");
+      toast.error("Checkout URL not available. Cart may have expired.");
     }
   };
 
@@ -71,7 +74,7 @@ export default function CartView() {
       await updateCartCount();
     } catch (err: any) {
       console.error("Error updating cart:", err);
-      alert("Failed to update cart: " + (err.message || "Unknown error"));
+      toast.error("Failed to update cart: " + (err.message || "Unknown error"));
     } finally {
       setUpdatingLineId(null);
     }
@@ -98,10 +101,10 @@ export default function CartView() {
 
       setCart(data.cart || null);
       await updateCartCount();
-      alert("Item removed from cart");
+      toast.success("Item removed from cart");
     } catch (err: any) {
       console.error("Error removing item:", err);
-      alert("Failed to remove item: " + (err.message || "Unknown error"));
+      toast.error("Failed to remove item: " + (err.message || "Unknown error"));
     } finally {
       setUpdatingLineId(null);
     }
@@ -112,7 +115,30 @@ export default function CartView() {
 
   const lines = cart?.lines?.edges?.map((edge: any) => edge.node) || [];
 
-  if (!cart || lines.length === 0) return <div>Your cart is empty.</div>;
+  if (!cart || lines.length === 0)
+    return (
+      <div className="flex flex-col items-center justify-center text-center gap-4">
+        <div className="w-64 h-64">
+          <img
+            src="/emptyCart.svg"
+            alt="Empty cart"
+            className="w-full h-full"
+          />
+        </div>
+
+        <h1 className="text-2xl font-semibold">Your cart is empty</h1>
+        <p className="text-gray-500">
+          Start exploring and add items to your cart.
+        </p>
+
+        <button
+          onClick={() => router.push("/products")}
+          className="px-6 py-3 bg-[#C9B27B] text-black font-semibold rounded-md hover:bg-[#b5a265] transition"
+        >
+          Browse Products
+        </button>
+      </div>
+    );
 
   return (
     <div className="space-y-4">

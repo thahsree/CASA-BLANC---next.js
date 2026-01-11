@@ -1,5 +1,6 @@
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { ToasterProvider } from "@/components/ToasterProvider";
 import { CartProvider } from "@/context/CartContext";
 import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
@@ -33,6 +34,7 @@ export default function RootLayout({
         className={`${interSans.variable} ${robotoMono.variable} antialiased bg-[#080808]`}
       >
         <CartProvider>
+          <ToasterProvider />
           <Navbar />
           {children}
           <Footer />

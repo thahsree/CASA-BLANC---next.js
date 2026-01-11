@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { IoStar } from "react-icons/io5";
 import { LiaShoppingBagSolid } from "react-icons/lia";
+import { toast } from "sonner";
 import DeliveryCheck from "./DeliveryCheck";
 import ReviewSection from "./ReviewSection";
 import SingleProductSkeleton from "./SingleProductSkeleton";
@@ -129,7 +130,7 @@ export default function SingleProductLanding({ id }: Props) {
 
       const variantId = product?.variants?.edges?.[0]?.node?.id;
       if (!variantId) {
-        alert("Product variant not found");
+        toast.error("Product variant not found");
         setAddingToCart(false);
         return;
       }
@@ -158,10 +159,10 @@ export default function SingleProductLanding({ id }: Props) {
       if (variantId) {
         await checkIfInCart(variantId);
       }
-      alert("Added to cart successfully!");
+      toast.success("Added to cart successfully!");
     } catch (err: any) {
       console.error("Error adding to cart:", err);
-      alert("Failed to add to cart: " + (err.message || "Unknown error"));
+      toast.error("Failed to add to cart: " + (err.message || "Unknown error"));
     } finally {
       setAddingToCart(false);
     }
@@ -210,7 +211,9 @@ export default function SingleProductLanding({ id }: Props) {
       setQuantity(newQuantity);
     } catch (err: any) {
       console.error("Error updating cart quantity:", err);
-      alert("Failed to update quantity: " + (err.message || "Unknown error"));
+      toast.error(
+        "Failed to update quantity: " + (err.message || "Unknown error")
+      );
       // Revert quantity on error
       const res = await fetch("/api/cart");
       const data = await res.json();

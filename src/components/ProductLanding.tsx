@@ -2,6 +2,7 @@
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import ProductCard from "./ProductCard";
 import ProductSkeleton from "./ProductSkeleton";
 
@@ -377,7 +378,7 @@ async function handleAddToCart(
     // Add to cart
     const variantId = product.variants?.edges?.[0]?.node?.id;
     if (!variantId) {
-      alert("Product variant not found");
+      toast.error("Product variant not found");
       return;
     }
 
@@ -407,9 +408,9 @@ async function handleAddToCart(
 
     // Update cart count in context
     await updateCartCount();
-    alert("Added to cart successfully!");
+    toast.success("Added to cart successfully!");
   } catch (err: any) {
     console.error("Error adding to cart:", err);
-    alert("Failed to add to cart: " + (err.message || "Unknown error"));
+    toast.error("Failed to add to cart: " + (err.message || "Unknown error"));
   }
 }

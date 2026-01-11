@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { IoStar } from "react-icons/io5";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -414,7 +415,7 @@ async function handleAddToCart(
     // Add to cart
     const variantId = product.variants.edges[0]?.node.id;
     if (!variantId) {
-      alert("Product variant not found");
+      toast.info("Product variant not found");
       return;
     }
 
@@ -444,9 +445,9 @@ async function handleAddToCart(
 
     // Update cart count in context
     await updateCartCount();
-    alert("Added to cart successfully!");
+    toast.success("Added to cart successfully!");
   } catch (err: any) {
     console.error("Error adding to cart:", err);
-    alert("Failed to add to cart: " + (err.message || "Unknown error"));
+    toast.error("Failed to add to cart: " + (err.message || "Unknown error"));
   }
 }

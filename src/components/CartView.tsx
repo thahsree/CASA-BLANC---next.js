@@ -142,6 +142,9 @@ export default function CartView() {
 
   return (
     <div className="space-y-4">
+      <h1 className="text-2xl max-sm:text-xl text-[#FFFFFF]/90 font-semibold mb-6">
+        My Cart
+      </h1>
       {lines.map((line: any) => (
         <div
           key={line.id}

@@ -8,8 +8,14 @@ export async function GET(
 ) {
   try {
     const { productId } = await params;
+    
+    // Decode the product ID
+    const decodedProductId = decodeURIComponent(productId);
+    
+    console.log("Reviews API - Raw productId:", productId);
+    console.log("Reviews API - Decoded productId:", decodedProductId);
 
-    if (!productId) {
+    if (!decodedProductId) {
       return NextResponse.json(
         { error: "Product ID is required" },
         { status: 400 }
@@ -24,24 +30,17 @@ export async function GET(
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    const query = {
-      productId,
-      published: true,
-    };
+    // Try multiple query formats to handle different ID formats
+    const queries = [
+      { productId: decodedProductId, published: true }, // Exact match
+      // Also try matching if decodedProductId is numeric and stored ID is full Shopify ID
+      ...(decodedProductId.match(/^\d+$/) ? [
+        { productId: new RegExp(decodedProductId), published: true } // Regex match for numeric IDs
+      ] : [])
+    ];
 
-    // Fetch paginated reviews for this product, sorted by newest first
-    const reviews = await Review.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
-      .maxTimeMS(8000);
-
-    // Get total count and calculate stats more efficiently
-    const totalReviews = await Review.countDocuments(query)
-      .maxTimeMS(8000);
-    
-    // Get stats with timeout
+    let reviews: any[] = [];
+    let totalReviews = 0;
     let stats = {
       totalReviews: 0,
       averageRating: 0,
@@ -52,33 +51,60 @@ export async function GET(
       rating5: 0,
     };
 
-    if (totalReviews > 0) {
-      try {
-        const statsResult = await Review.aggregate([
-          { $match: query },
-          {
-            $group: {
-              _id: null,
-              totalReviews: { $sum: 1 },
-              averageRating: { $avg: "$rating" },
-              rating1: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
-              rating2: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
-              rating3: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
-              rating4: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
-              rating5: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
-            },
-          },
-        ]);
+    // Try each query format
+    for (const query of queries) {
+      console.log("Reviews API - Trying query:", query);
+      
+      // Fetch paginated reviews for this product, sorted by newest first
+      const foundReviews = await Review.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .maxTimeMS(8000);
+
+      // Get total count and calculate stats more efficiently
+      const foundTotal = await Review.countDocuments(query)
+        .maxTimeMS(8000);
+      
+      console.log("Reviews API - Query result count:", foundReviews.length, "Total:", foundTotal);
+
+      if (foundReviews.length > 0 || foundTotal > 0) {
+        reviews = foundReviews;
+        totalReviews = foundTotal;
+        console.log("Reviews API - Found reviews with query:", query);
         
-        stats = statsResult[0] || stats;
-      } catch (statsError) {
-        console.warn("Stats calculation timed out, using basic calculation", statsError);
-        // Fallback to simple calculation
-        const allRatings = reviews.map((r) => r.rating);
-        stats.totalReviews = totalReviews;
-        stats.averageRating = allRatings.length > 0 
-          ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length 
-          : 0;
+        // Get stats with timeout
+        if (totalReviews > 0) {
+          try {
+            const statsResult = await Review.aggregate([
+              { $match: query },
+              {
+                $group: {
+                  _id: null,
+                  totalReviews: { $sum: 1 },
+                  averageRating: { $avg: "$rating" },
+                  rating1: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
+                  rating2: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
+                  rating3: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
+                  rating4: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
+                  rating5: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
+                },
+              },
+            ]);
+            
+            stats = statsResult[0] || stats;
+          } catch (statsError) {
+            console.warn("Stats calculation timed out, using basic calculation", statsError);
+            // Fallback to simple calculation
+            const allRatings = reviews.map((r) => r.rating);
+            stats.totalReviews = totalReviews;
+            stats.averageRating = allRatings.length > 0 
+              ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length 
+              : 0;
+          }
+        }
+        break; // Found reviews, stop trying other queries
       }
     }
 
@@ -86,7 +112,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      productId,
+      productId: decodedProductId,
       data: reviews,
       stats: {
         totalReviews,
@@ -108,8 +134,9 @@ export async function GET(
     });
   } catch (error) {
     console.error("❌ GET /api/reviews/[productId] error:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return NextResponse.json(
-      { error: "Failed to fetch reviews" },
+      { error: "Failed to fetch reviews", details: String(error) },
       { status: 500 }
     );
   }
@@ -121,6 +148,11 @@ export async function POST(
 ) {
   try {
     const { productId } = await params;
+    const decodedProductId = decodeURIComponent(productId);
+    
+    console.log("POST Reviews API - Raw productId:", productId);
+    console.log("POST Reviews API - Decoded productId:", decodedProductId);
+    
     const body = await req.json();
 
     const { authorName, email, rating, title, content, images } = body;
@@ -180,7 +212,7 @@ export async function POST(
 
     // Create new review
     const newReview = new Review({
-      productId,
+      productId: decodedProductId,
       authorName: authorName.trim(),
       email: email.toLowerCase().trim(),
       rating: parseInt(rating),

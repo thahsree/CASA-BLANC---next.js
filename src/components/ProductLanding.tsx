@@ -56,7 +56,15 @@ export default function ProductLanding() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("/api/products");
+        const timestamp = Date.now();
+        const res = await fetch(`/api/products?t=${timestamp}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        });
         if (!res.ok) throw new Error("Failed to fetch products");
         const body = await res.json();
 

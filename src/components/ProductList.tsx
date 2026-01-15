@@ -103,7 +103,15 @@ export default function ProductList() {
     const fetchProducts = async () => {
       try {
         console.log("Fetching products from /api/products");
-        const response = await fetch("/api/products");
+        const timestamp = Date.now();
+        const response = await fetch(`/api/products?t=${timestamp}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        });
         const data = await response.json();
         const fetchedProducts =
           data.products?.edges?.map((edge: any) => edge.node) || [];

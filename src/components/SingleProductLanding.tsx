@@ -59,7 +59,19 @@ export default function SingleProductLanding({ id }: Props) {
     const load = async () => {
       try {
         console.log("SingleProductLanding: Fetching product with ID:", id);
-        const res = await fetch(`/api/products/${encodeURIComponent(id)}`);
+        // Add timestamp to URL to force cache bust
+        const timestamp = Date.now();
+        const res = await fetch(
+          `/api/products/${encodeURIComponent(id)}?t=${timestamp}`,
+          {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              Pragma: "no-cache",
+              Expires: "0",
+            },
+          }
+        );
         const body = await res.json();
         console.log("SingleProductLanding: API response:", body);
 
@@ -77,7 +89,14 @@ export default function SingleProductLanding({ id }: Props) {
         // Fetch review stats
         try {
           const reviewRes = await fetch(
-            `/api/reviews/${encodeURIComponent(id)}`
+            `/api/reviews/${encodeURIComponent(id)}`,
+            {
+              cache: "no-store",
+              headers: {
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                Pragma: "no-cache",
+              },
+            }
           );
           const reviewData = await reviewRes.json();
           if (reviewRes.ok && reviewData.stats) {
@@ -163,6 +182,83 @@ export default function SingleProductLanding({ id }: Props) {
     } catch (err: any) {
       console.error("Error adding to cart:", err);
       toast.error("Failed to add to cart: " + (err.message || "Unknown error"));
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  async function handleBuyNow() {
+    if (!product || addingToCart) return;
+    setAddingToCart(true);
+
+    try {
+      // Get or create cart
+      let cartId = localStorage.getItem("cartId");
+
+      if (!cartId) {
+        const cartResponse = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "create" }),
+        });
+
+        if (!cartResponse.ok) {
+          const errorData = await cartResponse.json();
+          throw new Error(
+            errorData?.error || `Cart creation failed: ${cartResponse.status}`
+          );
+        }
+
+        const cartData = await cartResponse.json();
+        cartId = cartData?.cart?.id;
+
+        if (!cartId) {
+          throw new Error("No cart ID returned from create cart");
+        }
+
+        localStorage.setItem("cartId", cartId);
+      }
+
+      const variantId = product?.variants?.edges?.[0]?.node?.id;
+      if (!variantId) {
+        toast.error("Product variant not found");
+        setAddingToCart(false);
+        return;
+      }
+
+      const addResponse = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", cartId, variantId, quantity }),
+      });
+
+      if (!addResponse.ok) {
+        const errorData = await addResponse.json();
+        throw new Error(
+          errorData?.error || `Add to cart failed: ${addResponse.status}`
+        );
+      }
+
+      const addData = await addResponse.json();
+
+      if (addData?.error) {
+        throw new Error(addData.error);
+      }
+
+      // Fetch the updated cart to get checkout URL
+      const cartRes = await fetch("/api/cart");
+      const cartData = await cartRes.json();
+      const checkoutUrl = cartData?.cart?.checkoutUrl;
+
+      if (checkoutUrl) {
+        // Redirect directly to Shopify checkout
+        window.location.href = checkoutUrl;
+      } else {
+        throw new Error("Checkout URL not available");
+      }
+    } catch (err: any) {
+      console.error("Error in Buy Now:", err);
+      toast.error("Failed to process: " + (err.message || "Unknown error"));
     } finally {
       setAddingToCart(false);
     }
@@ -344,7 +440,11 @@ export default function SingleProductLanding({ id }: Props) {
 
           {/* PRIMARY CTA - Buy It Now (Dominant) */}
           <div className="flex flex-col gap-4 pt-2">
-            <button className="max-sm:z-10 w-full px-6 py-3 shadow-lg font-montserrat bg-[#D4AF6F] text-black font-bold text-lg rounded hover:bg-[#C9B27B] transition cursor-pointer max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none max-sm:flex max-sm:items-center max-sm:justify-between max-sm:py-4 max-sm:px-4 max-sm:gap-3">
+            <button
+              onClick={handleBuyNow}
+              disabled={addingToCart}
+              className="max-sm:z-10 w-full px-6 py-3 shadow-lg font-montserrat bg-[#D4AF6F] text-black font-bold text-lg rounded hover:bg-[#C9B27B] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:rounded-none max-sm:flex max-sm:items-center max-sm:justify-between max-sm:py-4 max-sm:px-4 max-sm:gap-3"
+            >
               {/* Mobile: Product info */}
               <div className="hidden max-sm:flex items-center gap-3">
                 {product.images?.edges?.[0]?.node?.url && (
@@ -368,7 +468,7 @@ export default function SingleProductLanding({ id }: Props) {
               </div>
 
               {/* Buy Now text (right side on mobile) */}
-              <span>Buy&nbsp;Now</span>
+              <span>{addingToCart ? "Processing..." : "Buy Now"}</span>
             </button>
 
             {/* SECONDARY - Quantity + Add to Cart (Compact Row) */}
@@ -489,8 +589,73 @@ export default function SingleProductLanding({ id }: Props) {
           {/* Product Details - Below CTA */}
           <div className="pt-4 border-t border-gray-700 pb-6 max-sm:pb-1">
             {product.description && product.description.trim() && (
-              <div className="text-[20px] max-sm:text-[14px] max-md:text-[17px] text-white/70 font-quicksand leading-[1.05]">
-                {product.description}
+              <div className="text-white/70 font-quicksand leading-relaxed">
+                {(() => {
+                  const desc = product.description;
+
+                  // Check if description contains HTML tags
+                  if (/<[^>]+>/.test(desc)) {
+                    // Has HTML - parse and render it
+                    return (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: desc }}
+                        className="prose prose-invert max-w-none [&_h1]:text-[28px] [&_h2]:text-[24px] [&_h3]:text-[20px] max-sm:[&_h1]:text-[18px] max-sm:[&_h2]:text-[16px] max-sm:[&_h3]:text-[14px] [&_h1]:font-montserrat [&_h2]:font-montserrat [&_h3]:font-montserrat [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-bold [&_h1]:text-[#C9B27B] [&_h2]:text-[#C9B27B] [&_h3]:text-[#C9B27B] [&_h1]:mt-6 [&_h2]:mt-6 [&_h3]:mt-6 [&_h1]:mb-3 [&_h2]:mb-3 [&_h3]:mb-3 [&_p]:font-quicksand [&_p]:mb-3 [&_p]:leading-relaxed [&_br]:h-3 [&_hr]:my-6 [&_hr]:border-gray-700"
+                      />
+                    );
+                  }
+
+                  // Plain text - use smart heading detection
+                  const paragraphs = desc
+                    .split(/\n\n+/)
+                    .map((p: string) => p.trim())
+                    .filter((p: string) => p);
+
+                  return paragraphs.map((paragraph: string, idx: number) => {
+                    const lines = paragraph
+                      .split("\n")
+                      .map((l: string) => l.trim())
+                      .filter((l: string) => l);
+
+                    const isSingleLine = lines.length === 1;
+                    const isShort = lines[0]?.length < 80;
+                    const sentenceCount = (lines[0]?.match(/[.!?]/g) || [])
+                      .length;
+                    const hasColon = lines[0]?.endsWith(":");
+                    const looksLikeHeading =
+                      isSingleLine && isShort && sentenceCount <= 1;
+
+                    const isAllCapsOrTitle = /^[A-Z][a-zA-Z0-9\s&-]*$/.test(
+                      lines[0] || ""
+                    );
+
+                    if (
+                      looksLikeHeading &&
+                      (isAllCapsOrTitle || sentenceCount === 0 || hasColon)
+                    ) {
+                      return (
+                        <h3
+                          key={idx}
+                          className="text-[24px] max-sm:text-[16px] font-montserrat font-bold text-[#C9B27B] mt-6 mb-3 pt-3"
+                        >
+                          {lines[0]}
+                        </h3>
+                      );
+                    }
+
+                    return (
+                      <div key={idx} className="space-y-2">
+                        {lines.map((line: string, lineIdx: number) => (
+                          <p
+                            key={lineIdx}
+                            className="text-[20px] max-sm:text-[14px] max-md:text-[17px] mb-2"
+                          >
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
             <DeliveryCheck />

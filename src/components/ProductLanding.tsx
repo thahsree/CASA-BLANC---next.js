@@ -25,12 +25,6 @@ export default function ProductLanding() {
   >("popularity");
   const [currentPage, setCurrentPage] = useState(1);
   const [cartVariantIds, setCartVariantIds] = useState<Set<string>>(new Set());
-  const [productRatings, setProductRatings] = useState<{
-    [key: string]: number;
-  }>({});
-  const [productReviewCounts, setProductReviewCounts] = useState<{
-    [key: string]: number;
-  }>({});
   const itemsPerPage = 10;
 
   // Fetch cart to get variant IDs of items in cart
@@ -76,36 +70,6 @@ export default function ProductLanding() {
           body?.data?.products?.edges;
         const items = edges?.map((e: any) => e.node) || [];
         setProducts(items);
-
-        // Fetch ratings for all products
-        const ratings: { [key: string]: number } = {};
-        const reviewCounts: { [key: string]: number } = {};
-        for (const product of items) {
-          try {
-            const ratingRes = await fetch(
-              `/api/reviews/${encodeURIComponent(product.id)}`
-            );
-            const ratingData = await ratingRes.json();
-            const reviewList = ratingData.data || ratingData.reviews || [];
-            if (reviewList.length > 0) {
-              const avgRating =
-                reviewList.reduce(
-                  (sum: number, review: any) => sum + review.rating,
-                  0
-                ) / reviewList.length;
-              ratings[product.id] = avgRating;
-              reviewCounts[product.id] = reviewList.length;
-            } else {
-              ratings[product.id] = 0;
-              reviewCounts[product.id] = 0;
-            }
-          } catch (err) {
-            ratings[product.id] = 0;
-            reviewCounts[product.id] = 0;
-          }
-        }
-        setProductRatings(ratings);
-        setProductReviewCounts(reviewCounts);
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Could not load products");
@@ -136,17 +100,10 @@ export default function ProductLanding() {
             </label>
             <select
               id="sort"
-              value={sortBy}
-              onChange={(e) => {
-                handleSort(
-                  e.target.value as "popularity" | "price-low" | "price-high"
-                );
-              }}
+              disabled
               className="px-4 py-2 max-md:px-2 max-md:py-1 max-sm:px-1 border border-gray-300 rounded-lg font-quicksand focus:outline-none focus:ring-2 focus:ring-[#C9B27B] text-lg max-md:text-base max-sm:text-sm"
             >
-              <option value="popularity">Popularity</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
+              <option>Popularity</option>
             </select>
           </div>
           <p className="text-sm text-gray-600 font-quicksand max-sm:text-xs">
@@ -175,17 +132,10 @@ export default function ProductLanding() {
             </label>
             <select
               id="sort"
-              value={sortBy}
-              onChange={(e) => {
-                handleSort(
-                  e.target.value as "popularity" | "price-low" | "price-high"
-                );
-              }}
+              disabled
               className="px-4 py-2 max-md:px-2 max-md:py-1 max-sm:px-1 border border-gray-300 rounded-lg font-quicksand focus:outline-none focus:ring-2 focus:ring-[#C9B27B] text-lg max-md:text-base max-sm:text-sm"
             >
-              <option value="name">Product Name (A-Z)</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
+              <option>Popularity</option>
             </select>
           </div>
           <p className="text-sm text-gray-600 font-quicksand max-sm:text-xs">
@@ -201,15 +151,15 @@ export default function ProductLanding() {
   // Sort products based on selected criteria
   const sortedProducts = [...products].sort((a, b) => {
     if (sortBy === "popularity") {
-      const ratingA = productRatings[a.id] || 0;
-      const ratingB = productRatings[b.id] || 0;
+      const ratingA = 0; // No longer fetching ratings
+      const ratingB = 0; // No longer fetching ratings
       // Primary: High to low rating
       if (ratingB !== ratingA) {
         return ratingB - ratingA;
       }
       // Tie-breaker: More reviews appear first (high to low)
-      const countA = productReviewCounts[a.id] || 0;
-      const countB = productReviewCounts[b.id] || 0;
+      const countA = 0; // No longer fetching review counts
+      const countB = 0; // No longer fetching review counts
       return countB - countA;
     } else if (sortBy === "price-low") {
       const priceA = parseFloat(a.priceRange?.minVariantPrice?.amount || 0);

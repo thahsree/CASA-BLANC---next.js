@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -17,11 +18,20 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItemCount, setCartItemCount] = useState<number>(0);
+  const lastFetchRef = useRef<number>(0);
+  const CACHE_DURATION = 30000; // 30 seconds
 
-  // Fetch cart count from API
+  // Fetch cart count from API with caching
   const updateCartCount = async () => {
+    const now = Date.now();
+
+    // Skip if fetched recently (within cache duration)
+    if (now - lastFetchRef.current < CACHE_DURATION) {
+      return;
+    }
+
     try {
-      const res = await fetch("/api/cart");
+      const res = await fetch("/api/cart", { cache: "no-store" });
       if (!res.ok) {
         console.error("Failed to fetch cart:", res.status);
         return;
@@ -32,14 +42,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         (sum: number, edge: any) => sum + (edge.node?.quantity || 0),
         0
       );
-      console.log("Cart count updated to:", totalItems);
       setCartItemCount(totalItems);
+      lastFetchRef.current = now;
     } catch (err) {
       console.error("Failed to fetch cart count:", err);
     }
   };
 
-  // Fetch cart count on mount
+  // Fetch cart count on mount only
   useEffect(() => {
     updateCartCount();
   }, []);

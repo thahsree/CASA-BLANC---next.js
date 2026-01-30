@@ -1,13 +1,21 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { IoStar } from "react-icons/io5";
 import { LiaShoppingBagSolid } from "react-icons/lia";
 import { toast } from "sonner";
 import DeliveryCheck from "./DeliveryCheck";
-import ReviewSection from "./ReviewSection";
 import SingleProductSkeleton from "./SingleProductSkeleton";
+
+// Lazy load heavy ReviewSection
+const ReviewSection = dynamic(() => import("./ReviewSection"), {
+  loading: () => (
+    <div className="py-12 text-center text-gray-400">Loading reviews...</div>
+  ),
+  ssr: false,
+});
 
 type Props = { id: string };
 
@@ -355,7 +363,10 @@ export default function SingleProductLanding({ id }: Props) {
                 src={heroImage.url}
                 alt={heroImage.altText || product.title}
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
+                priority
                 className="object-cover"
+                quality={85}
               />
             </div>
           )}
@@ -374,7 +385,9 @@ export default function SingleProductLanding({ id }: Props) {
                   src={e.node.url}
                   alt={e.node.altText || product.title}
                   fill
+                  sizes="100px"
                   className="object-cover"
+                  quality={75}
                 />
               </button>
             ))}
@@ -453,6 +466,7 @@ export default function SingleProductLanding({ id }: Props) {
                     src={product.images.edges[0].node.url}
                     alt={product.title}
                     className="w-12 h-12 object-cover rounded"
+                    loading="lazy"
                   />
                 )}
                 <div className="text-left">
@@ -598,11 +612,11 @@ export default function SingleProductLanding({ id }: Props) {
                       __html: product.descriptionHtml,
                     }}
                     className="prose prose-invert max-w-none 
-            [&_h3]:text-[24px] max-sm:[&_h3]:text-[16px] [&_h3]:font-montserrat [&_h3]:font-bold [&_h3]:text-[#C9B27B] [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:pt-3
+            [&_h3]:text-[24px] max-sm:[&_h3]:text-[16px] [&_h3]:font-montserrat [&_h3]:font-bold [&_h3]:text-white/90 [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:pt-3
             [&_p]:text-[16px] [&_p]:font-quicksand [&_p]:mb-4 [&_p]:leading-relaxed
             [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
             [&_li]:mb-2
-            [&_strong]:text-white/90 [&_strong]:font-bold
+            [&_strong]:text-white/80 [&_strong]:font-bold
             [&_hr]:my-6 [&_hr]:border-gray-700"
                   />
                 ) : (
@@ -648,7 +662,7 @@ export default function SingleProductLanding({ id }: Props) {
               className="w-full px-4 py-2 border border-gray-500 text-gray-400 font-medium rounded hover:border-green-500 hover:text-green-500 transition flex items-center justify-center gap-2 cursor-pointer text-sm"
             >
               <div className="w-[20px] h-[20px]">
-                <img src="/whatsapp.svg" alt="WhatsApp" />
+                <img src="/whatsapp.svg" alt="WhatsApp" loading="lazy" />
               </div>
               Share on WhatsApp
             </button>
@@ -656,7 +670,7 @@ export default function SingleProductLanding({ id }: Props) {
         </div>
       </div>
 
-      {/* Reviews Section */}
+      {/* Reviews Section - Lazy Loaded */}
       <ReviewSection productId={id} />
     </div>
   );

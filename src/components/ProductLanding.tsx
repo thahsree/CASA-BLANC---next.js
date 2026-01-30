@@ -15,7 +15,7 @@ import ProductSkeleton from "./ProductSkeleton";
 // - Includes sorting and pagination functionality
 export default function ProductLanding() {
   const router = useRouter();
-  const { updateCartCount, cartItemCount } = useCart();
+  const { addToCartLocally, cartItemCount } = useCart();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
@@ -255,7 +255,7 @@ export default function ProductLanding() {
               const variantId = prod.variants?.edges?.[0]?.node?.id;
               const isInCart = variantId && cartVariantIds.has(variantId);
               if (!isInCart) {
-                handleAddToCart(prod, updateCartCount);
+                handleAddToCart(prod, addToCartLocally);
               }
             }}
           />
@@ -306,10 +306,9 @@ export default function ProductLanding() {
 
 async function handleAddToCart(
   product: any,
-  updateCartCount: () => Promise<void>
+  addToCartLocally: (item: any) => void
 ) {
   try {
-    // Get or create cart
     let cartId = localStorage.getItem("cartId");
 
     if (!cartId) {
@@ -333,7 +332,6 @@ async function handleAddToCart(
       localStorage.setItem("cartId", cartId);
     }
 
-    // Add to cart
     const variantId = product.variants?.edges?.[0]?.node?.id;
     if (!variantId) {
       toast.error("Product variant not found");
@@ -364,8 +362,16 @@ async function handleAddToCart(
       throw new Error(addData.error);
     }
 
-    // Update cart count in context
-    await updateCartCount();
+    // Update cart context locally with spread operator
+    addToCartLocally({
+      id: variantId,
+      quantity: 1,
+      merchandise: {
+        id: variantId,
+        title: product.title,
+      },
+    });
+
     toast.success("Added to cart successfully!");
   } catch (err: any) {
     console.error("Error adding to cart:", err);

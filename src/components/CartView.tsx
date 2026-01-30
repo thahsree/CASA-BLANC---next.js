@@ -10,7 +10,7 @@ import CartSkeleton from "./CartSkeleton";
 // to persist the cart id across page reloads.
 export default function CartView() {
   const router = useRouter();
-  const { updateCartCount } = useCart();
+  const { setCartItems, fetchCartFromAPI } = useCart();
   const [cart, setCart] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +71,8 @@ export default function CartView() {
       }
 
       setCart(data.cart || null);
-      await updateCartCount();
+      // Update context with new cart items
+      await fetchCartFromAPI();
     } catch (err: any) {
       console.error("Error updating cart:", err);
       toast.error("Failed to update cart: " + (err.message || "Unknown error"));
@@ -100,7 +101,8 @@ export default function CartView() {
       }
 
       setCart(data.cart || null);
-      await updateCartCount();
+      // Update context with new cart items
+      await fetchCartFromAPI();
       toast.success("Item removed from cart");
     } catch (err: any) {
       console.error("Error removing item:", err);

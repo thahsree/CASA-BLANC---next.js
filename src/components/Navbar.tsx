@@ -56,6 +56,7 @@ export default function Navbar() {
               {mobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </button>
           </div>
+
           {/* Desktop Navigation */}
           <ul className="hidden md:flex items-center gap-8 min-w-[250px] text-[#737373]">
             {navLinks.map((link) => {

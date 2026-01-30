@@ -1,8 +1,9 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import { SKELETON_BLUR_URLS } from "@/lib/skeletonUtils";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { IoStar } from "react-icons/io5";
 import { LiaShoppingBagSolid } from "react-icons/lia";
 import { toast } from "sonner";
@@ -25,7 +26,7 @@ type Props = { id: string };
 // - Adds to cart via `/api/cart` using the first variant
 export default function SingleProductLanding({ id }: Props) {
   console.log("SingleProductLanding mounted with id:", id);
-  const { updateCartCount } = useCart();
+  const { addToCartLocally } = useCart();
 
   const checkIfInCart = async (variantId: string) => {
     try {
@@ -58,10 +59,38 @@ export default function SingleProductLanding({ id }: Props) {
   const [isInCart, setIsInCart] = useState(false);
   const [cartLineId, setCartLineId] = useState<string | null>(null);
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
+  const [preloadedImages, setPreloadedImages] = useState<Set<string>>(
+    new Set()
+  );
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [reviewStats, setReviewStats] = useState<any>({
     averageRating: 0,
     totalReviews: 0,
   });
+
+  // Preload all product images on mount
+  const preloadImages = useCallback((images: any[]) => {
+    const loaded = new Set<string>();
+    images.forEach((edge: any) => {
+      const url = edge?.node?.url;
+      if (url) {
+        const img = new window.Image();
+        img.src = url;
+        loaded.add(url);
+      }
+    });
+    setPreloadedImages(loaded);
+  }, []);
+
+  // Track when images finish loading
+  const handleImageLoad = useCallback((url: string) => {
+    setLoadedImages((prev) => new Set(prev).add(url));
+  }, []);
+
+  // Optimized image selection - immediate state update
+  const handleImageSelect = useCallback((index: number) => {
+    setSelectedImageIndex(index);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -89,6 +118,12 @@ export default function SingleProductLanding({ id }: Props) {
         } else {
           const product = body.product || null;
           setProduct(product);
+
+          // Preload all images immediately
+          if (product?.images?.edges) {
+            preloadImages(product.images.edges);
+          }
+
           if (product?.variants?.edges?.[0]?.node?.id) {
             await checkIfInCart(product.variants.edges[0].node.id);
           }
@@ -121,15 +156,13 @@ export default function SingleProductLanding({ id }: Props) {
       }
     };
     load();
-  }, [id]);
+  }, [id, preloadImages]);
 
-  product && console.log(">>>>>DESCRIPTION", product);
   async function handleAddToCart() {
     if (!product || addingToCart) return;
     setAddingToCart(true);
 
     try {
-      // First, try to get or create a cart
       let cartId = localStorage.getItem("cartId");
 
       if (!cartId) {
@@ -182,8 +215,16 @@ export default function SingleProductLanding({ id }: Props) {
         throw new Error(addData.error);
       }
 
-      // Update cart count in context
-      await updateCartCount();
+      // Update cart context locally (no API call needed)
+      addToCartLocally({
+        id: variantId,
+        quantity: quantity,
+        merchandise: {
+          id: variantId,
+          title: product.title,
+        },
+      });
+
       if (variantId) {
         await checkIfInCart(variantId);
       }
@@ -201,7 +242,6 @@ export default function SingleProductLanding({ id }: Props) {
     setAddingToCart(true);
 
     try {
-      // Get or create cart
       let cartId = localStorage.getItem("cartId");
 
       if (!cartId) {
@@ -254,13 +294,22 @@ export default function SingleProductLanding({ id }: Props) {
         throw new Error(addData.error);
       }
 
+      // Update cart context locally
+      addToCartLocally({
+        id: variantId,
+        quantity: quantity,
+        merchandise: {
+          id: variantId,
+          title: product.title,
+        },
+      });
+
       // Fetch the updated cart to get checkout URL
       const cartRes = await fetch("/api/cart");
       const cartData = await cartRes.json();
       const checkoutUrl = cartData?.cart?.checkoutUrl;
 
       if (checkoutUrl) {
-        // Redirect directly to Shopify checkout
         window.location.href = checkoutUrl;
       } else {
         throw new Error("Checkout URL not available");
@@ -311,8 +360,16 @@ export default function SingleProductLanding({ id }: Props) {
         throw new Error(updateData.error);
       }
 
-      // Update cart count in context
-      await updateCartCount();
+      // Update cart context locally with new quantity
+      addToCartLocally({
+        id: cartLineId,
+        quantity: newQuantity,
+        merchandise: {
+          id: product?.variants?.edges?.[0]?.node?.id,
+          title: product.title,
+        },
+      });
+
       setQuantity(newQuantity);
     } catch (err: any) {
       console.error("Error updating cart quantity:", err);
@@ -340,6 +397,8 @@ export default function SingleProductLanding({ id }: Props) {
     );
 
   const heroImage = product.images?.edges?.[selectedImageIndex]?.node;
+  const heroImageUrl = heroImage?.url;
+  const isHeroLoaded = heroImageUrl && loadedImages.has(heroImageUrl);
 
   const handleWhatsAppShare = () => {
     const productUrl =
@@ -357,40 +416,68 @@ export default function SingleProductLanding({ id }: Props) {
     <div className="w-full h-full">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div className="lg:sticky lg:top-0 lg:h-fit">
-          {heroImage && (
-            <div className="relative w-full h-[500px] max-sm:h-80 rounded overflow-hidden bg-gray-100">
+          {/* Hero Image with Skeleton */}
+          <div className="relative w-full h-[500px] max-sm:h-80 rounded overflow-hidden bg-zinc-800">
+            {!isHeroLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] animation-shimmer" />
+            )}
+            {heroImage && (
               <Image
+                key={selectedImageIndex}
                 src={heroImage.url}
                 alt={heroImage.altText || product.title}
                 fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
                 priority
-                className="object-cover"
-                quality={85}
-              />
-            </div>
-          )}
-          <div className="mt-4 grid grid-cols-4 gap-3">
-            {product.images?.edges?.map((e: any, idx: number) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedImageIndex(idx)}
-                className={`relative w-full h-20 rounded overflow-hidden bg-gray-100 border-2 transition ${
-                  selectedImageIndex === idx
-                    ? "border-[#C9B27B]"
-                    : "border-transparent hover:border-gray-300"
+                className={`object-cover transition-opacity duration-300 ${
+                  isHeroLoaded ? "opacity-100" : "opacity-0"
                 }`}
-              >
-                <Image
-                  src={e.node.url}
-                  alt={e.node.altText || product.title}
-                  fill
-                  sizes="100px"
-                  className="object-cover"
-                  quality={75}
-                />
-              </button>
-            ))}
+                quality={85}
+                placeholder="blur"
+                blurDataURL={SKELETON_BLUR_URLS.heroImage}
+                onLoadingComplete={() => handleImageLoad(heroImage.url)}
+              />
+            )}
+          </div>
+
+          {/* Thumbnail Images with Skeleton */}
+          <div className="mt-4 grid grid-cols-4 gap-3">
+            {product.images?.edges?.map((e: any, idx: number) => {
+              const imageUrl = e.node?.url;
+              const isPreloaded = preloadedImages.has(imageUrl);
+              const isLoaded = loadedImages.has(imageUrl);
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleImageSelect(idx)}
+                  className={`relative w-full h-20 rounded overflow-hidden bg-zinc-800 border-2 transition-all ${
+                    selectedImageIndex === idx
+                      ? "border-[#C9B27B] ring-2 ring-[#C9B27B]"
+                      : "border-transparent hover:border-gray-300"
+                  }`}
+                >
+                  {/* Skeleton loader */}
+                  {!isLoaded && (
+                    <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] animation-shimmer" />
+                  )}
+                  <Image
+                    src={e.node.url}
+                    alt={e.node.altText || product.title}
+                    fill
+                    sizes="100px"
+                    className={`object-cover transition-opacity duration-300 ${
+                      isLoaded ? "opacity-100" : "opacity-0"
+                    }`}
+                    quality={60}
+                    loading="eager"
+                    placeholder={isPreloaded ? "empty" : "blur"}
+                    blurDataURL={SKELETON_BLUR_URLS.thumbnail}
+                    onLoadingComplete={() => handleImageLoad(imageUrl)}
+                  />
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -1,35 +1,39 @@
 "use client";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
+export interface CartItem {
+  id: string;
+  quantity: number;
+  merchandise?: {
+    id: string;
+    title: string;
+  };
+}
+
 interface CartContextType {
   cartItemCount: number;
+  cartItems: CartItem[];
   setCartItemCount: (count: number) => void;
-  updateCartCount: () => Promise<void>;
+  setCartItems: (items: CartItem[]) => void;
+  addToCartLocally: (item: CartItem) => void;
+  fetchCartFromAPI: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItemCount, setCartItemCount] = useState<number>(0);
-  const lastFetchRef = useRef<number>(0);
-  const CACHE_DURATION = 30000; // 30 seconds
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Fetch cart count from API with caching
-  const updateCartCount = async () => {
-    const now = Date.now();
-
-    // Skip if fetched recently (within cache duration)
-    if (now - lastFetchRef.current < CACHE_DURATION) {
-      return;
-    }
-
+  // Fetch cart from API on mount only
+  const fetchCartFromAPI = useCallback(async () => {
     try {
       const res = await fetch("/api/cart", { cache: "no-store" });
       if (!res.ok) {
@@ -38,26 +42,76 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       const data = await res.json();
       const lines = data.cart?.lines?.edges || [];
-      const totalItems = lines.reduce(
-        (sum: number, edge: any) => sum + (edge.node?.quantity || 0),
+
+      // Parse cart items
+      const items: CartItem[] = lines.map((edge: any) => ({
+        id: edge.node?.id,
+        quantity: edge.node?.quantity || 0,
+        merchandise: {
+          id: edge.node?.merchandise?.id,
+          title: edge.node?.merchandise?.title,
+        },
+      }));
+
+      const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
+      setCartItems(items);
+      setCartItemCount(totalItems);
+      console.log("Cart fetched from API:", totalItems);
+    } catch (err) {
+      console.error("Failed to fetch cart from API:", err);
+    }
+  }, []);
+
+  // Add item to cart locally (after successful API call)
+  const addToCartLocally = useCallback((newItem: CartItem) => {
+    setCartItems((prevItems) => {
+      // Check if item already exists
+      const existingItem = prevItems.find(
+        (item) => item.merchandise?.id === newItem.merchandise?.id
+      );
+
+      let updatedItems: CartItem[];
+      if (existingItem) {
+        // Update quantity
+        updatedItems = prevItems.map((item) =>
+          item.merchandise?.id === newItem.merchandise?.id
+            ? { ...item, quantity: newItem.quantity }
+            : item
+        );
+      } else {
+        // Add new item
+        updatedItems = [...prevItems, newItem];
+      }
+
+      // Update count
+      const totalItems = updatedItems.reduce(
+        (sum, item) => sum + item.quantity,
         0
       );
       setCartItemCount(totalItems);
-      lastFetchRef.current = now;
-    } catch (err) {
-      console.error("Failed to fetch cart count:", err);
-    }
-  };
 
-  // Fetch cart count on mount only
-  useEffect(() => {
-    updateCartCount();
+      console.log("Cart updated locally. New count:", totalItems);
+      return updatedItems;
+    });
   }, []);
 
-  // Memoize context value to ensure stability
+  // Fetch cart on mount
+  useEffect(() => {
+    fetchCartFromAPI();
+  }, [fetchCartFromAPI]);
+
+  // Memoize context value
   const value = useMemo(
-    () => ({ cartItemCount, setCartItemCount, updateCartCount }),
-    [cartItemCount]
+    () => ({
+      cartItemCount,
+      cartItems,
+      setCartItemCount,
+      setCartItems,
+      addToCartLocally,
+      fetchCartFromAPI,
+    }),
+    [cartItemCount, cartItems, addToCartLocally, fetchCartFromAPI]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

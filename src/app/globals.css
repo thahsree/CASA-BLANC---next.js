@@ -46,3 +46,17 @@ select option:checked {
   background: #C9B27B;
   color: #000;
 }
+
+/* Add this to existing globals.css */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animation-shimmer {
+  animation: shimmer 2s infinite;
+}

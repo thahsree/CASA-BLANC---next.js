@@ -1,41 +1,36 @@
 import Hero from "@/components/Hero";
 import ProductList from "@/components/ProductList";
+import TrustSection from "@/components/TrustSection";
 import dynamic from "next/dynamic";
 
-// Lazy load below-the-fold components
-const ProductLanding = dynamic(() => import("@/components/ProductLanding"), {
-  loading: () => (
-    <div className="py-32 text-center text-gray-400">
-      Loading featured products...
-    </div>
-  ),
-});
-
+// Lazy load below-the-fold components with custom loading state
 const LazyFaq = dynamic(() => import("@/components/CasaFaq"), {
-  loading: () => (
-    <div className="py-32 text-center text-gray-400">Loading FAQ...</div>
-  ),
+  loading: () => <div className="h-96 bg-zinc-900" />,
+  ssr: true,
 });
 
 const LazyBenefits = dynamic(() => import("@/components/ShoppingBenefits"), {
-  loading: () => (
-    <div className="py-32 text-center text-gray-400">Loading benefits...</div>
-  ),
+  loading: () => <div className="h-96 bg-zinc-900" />,
+  ssr: true,
 });
 
 const LazySubscription = dynamic(() => import("@/components/Subscription"), {
-  loading: () => (
-    <div className="py-32 text-center text-gray-400">
-      Loading subscription...
-    </div>
-  ),
+  loading: () => <div className="h-96 bg-zinc-900" />,
+  ssr: true,
 });
 
 export default function Home() {
   return (
     <main className="min-h-screen font-sans bg-[#080808]">
+      {/* Above-the-fold */}
       <Hero />
-      <div className="w-full  pt-32 max-md:pt-16 py-32 max-md:py-16 opacity-95 px-12 max-md:px-6 max-sm:px-3 relative overflow-hidden">
+      <TrustSection />
+
+      {/* Below-the-fold - Lazy loaded */}
+      <LazyFaq />
+
+      {/* Featured Products Section */}
+      <div className="w-full pt-32 max-md:pt-16 py-32 max-md:py-16 opacity-95 px-12 max-md:px-6 max-sm:px-3 relative overflow-hidden">
         <div className="py-8">
           <h1 className="text-[22px] sm:text-[26px] md:text-[32px] font-montserrat font-semibold tracking-normal leading-[1.1] text-white/90">
             Featured Products
@@ -46,6 +41,10 @@ export default function Home() {
         </div>
         <ProductList />
       </div>
+
+      {/* Lazy load remaining sections */}
+      <LazyBenefits />
+      <LazySubscription />
     </main>
   );
 }

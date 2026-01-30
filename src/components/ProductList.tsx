@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
+import { SKELETON_BLUR_URLS } from "@/lib/skeletonUtils";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -44,13 +45,13 @@ interface ReviewStats {
 }
 
 export default function ProductList() {
-  const { updateCartCount, cartItemCount } = useCart();
+  const { addToCartLocally, cartItemCount } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cartVariantIds, setCartVariantIds] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [itemsPerView, setItemsPerView] = useState(4); // Default for desktop
+  const [itemsPerView, setItemsPerView] = useState(4);
   const [dragStart, setDragStart] = useState(0);
   const [dragEnd, setDragEnd] = useState(0);
   const [reviewStats, setReviewStats] = useState<Map<string, ReviewStats>>(
@@ -58,11 +59,9 @@ export default function ProductList() {
   );
 
   const navigate = (url: string) => {
-    // Simple client-side navigation for environments without Router hooks
     window.location.href = url;
   };
 
-  // Fetch reviews for a specific product
   const fetchProductReviews = async (productId: string) => {
     try {
       const response = await fetch(
@@ -79,7 +78,6 @@ export default function ProductList() {
     }
   };
 
-  // Fetch cart to get variant IDs of items in cart
   const fetchCartVariants = async () => {
     try {
       const res = await fetch("/api/cart");
@@ -117,7 +115,6 @@ export default function ProductList() {
           data.products?.edges?.map((edge: any) => edge.node) || [];
         setProducts(fetchedProducts);
 
-        // Fetch reviews for all products
         fetchedProducts.forEach((product: Product) => {
           fetchProductReviews(product.id);
         });
@@ -133,14 +130,13 @@ export default function ProductList() {
 
     fetchProducts();
 
-    // Handle responsive items per view
     const updateItemsPerView = () => {
       if (window.innerWidth < 640) {
-        setItemsPerView(2); // Mobile
+        setItemsPerView(2);
       } else if (window.innerWidth < 1024) {
-        setItemsPerView(3); // Tablet
+        setItemsPerView(3);
       } else {
-        setItemsPerView(4); // Desktop
+        setItemsPerView(4);
       }
     };
 
@@ -149,7 +145,6 @@ export default function ProductList() {
     return () => window.removeEventListener("resize", updateItemsPerView);
   }, []);
 
-  // Fetch cart variants on mount and when cart count changes
   useEffect(() => {
     fetchCartVariants();
   }, [cartItemCount]);
@@ -181,10 +176,8 @@ export default function ProductList() {
     setDragEnd(clientX);
 
     if (dragStart - clientX > 50) {
-      // Swiped left - go next
       handleNext();
     } else if (clientX - dragStart > 50) {
-      // Swiped right - go previous
       handlePrevious();
     }
   };
@@ -230,7 +223,6 @@ export default function ProductList() {
         <div className="text-center py-12">No products available</div>
       ) : (
         <>
-          {/* Slider Container with Drag Support */}
           <div
             className="slider-container select-none"
             onMouseDown={handleDragStart}
@@ -240,18 +232,18 @@ export default function ProductList() {
             style={{ cursor: "grab", userSelect: "none" }}
           >
             <div className="flex items-center justify-between gap-3 sm:gap-4 lg:gap-6">
-              {/* Products Grid Slider */}
               <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                  {visibleProducts.map((product) => {
+                  {visibleProducts.map((product, idx) => {
                     const variantId = product.variants.edges[0]?.node.id;
                     const isInCart = variantId && cartVariantIds.has(variantId);
+                    const shouldPrioritize = idx < 2;
 
                     return (
                       <Link
                         key={product.id}
                         href={`/products/${encodeURIComponent(product.id)}`}
-                        className="slide-animation bg-white dark:bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full "
+                        className="slide-animation bg-white dark:bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full"
                       >
                         {product.images.edges[0] && (
                           <div className="relative w-full h-40 sm:h-48 bg-gray-200 overflow-hidden">
@@ -262,7 +254,13 @@ export default function ProductList() {
                                 product.title
                               }
                               fill
-                              className="object-cover hover:scale-110 transition duration-300 "
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                              priority={shouldPrioritize}
+                              loading={shouldPrioritize ? "eager" : "lazy"}
+                              className="object-cover hover:scale-110 transition duration-300"
+                              quality={75}
+                              placeholder="blur"
+                              blurDataURL={SKELETON_BLUR_URLS.productCard}
                             />
                           </div>
                         )}
@@ -345,7 +343,7 @@ export default function ProductList() {
                               onClick={(e) => {
                                 e.preventDefault();
                                 if (!isInCart) {
-                                  handleAddToCart(product, updateCartCount);
+                                  handleAddToCart(product, addToCartLocally);
                                 }
                               }}
                               className={`${
@@ -393,10 +391,9 @@ export default function ProductList() {
 
 async function handleAddToCart(
   product: Product,
-  updateCartCount: () => Promise<void>
+  addToCartLocally: (item: any) => void
 ) {
   try {
-    // Get or create cart
     let cartId = localStorage.getItem("cartId");
 
     if (!cartId) {
@@ -420,10 +417,9 @@ async function handleAddToCart(
       localStorage.setItem("cartId", cartId);
     }
 
-    // Add to cart
     const variantId = product.variants.edges[0]?.node.id;
     if (!variantId) {
-      toast.info("Product variant not found");
+      toast.error("Product variant not found");
       return;
     }
 
@@ -451,8 +447,16 @@ async function handleAddToCart(
       throw new Error(addData.error);
     }
 
-    // Update cart count in context
-    await updateCartCount();
+    // Update cart context locally with spread operator
+    addToCartLocally({
+      id: variantId,
+      quantity: 1,
+      merchandise: {
+        id: variantId,
+        title: product.title,
+      },
+    });
+
     toast.success("Added to cart successfully!");
   } catch (err: any) {
     console.error("Error adding to cart:", err);

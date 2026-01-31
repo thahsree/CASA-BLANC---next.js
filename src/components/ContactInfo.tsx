@@ -52,13 +52,13 @@ export default function ContactInfo() {
     {
       icon: <IoMailOpen size={32} />,
       title: "Email",
-      details: ["support@casablancc.com", "info@casablancc.com"],
+      details: ["support@casablancc.in", "info@casablancc.in"],
       color: "from-purple-500 to-purple-600",
     },
     {
       icon: <IoLocationSharp size={32} />,
       title: "Address",
-      details: ["Casa Blancc Street", "Pappinissery, Kannur, India"],
+      details: ["Casa Blancc", "Pappinissery, Kannur, India"],
       color: "from-pink-500 to-pink-600",
     },
     {

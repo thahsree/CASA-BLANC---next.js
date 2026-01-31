@@ -128,7 +128,9 @@ export default function CartView() {
           />
         </div>
 
-        <h1 className="text-2xl font-semibold">Your cart is empty</h1>
+        <h1 className="text-2xl font-semibold text-white/90">
+          Your cart is empty
+        </h1>
         <p className="text-gray-500">
           Start exploring and add items to your cart.
         </p>

@@ -73,7 +73,7 @@ export default function ContactInfo() {
   ];
 
   return (
-    <div className="w-full">
+    <div className="w-full bg-[#080808]">
       {mounted && (
         <style>{`
           @keyframes scaleIn {
@@ -157,45 +157,43 @@ export default function ContactInfo() {
         `}</style>
       )}
 
-      {mounted && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {infoCards.map((card, idx) => (
-            <div
-              key={idx}
-              className={`info-card ${visibleCards[idx] ? "visible" : ""}`}
-              style={{
-                animationDelay: `${idx * 0.15}s`,
-              }}
-            >
-              <div className="gradient-border p-6 rounded-lg h-full hover:shadow-2xl transition-all duration-300 bg-zinc-900/50 backdrop-blur">
-                {/* Icon */}
-                <div
-                  className={`icon-wrapper inline-flex p-3 rounded-lg bg-gradient-to-br ${card.color} text-white mb-4`}
-                >
-                  {card.icon}
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {infoCards.map((card, idx) => (
+          <div
+            key={idx}
+            className={`info-card ${visibleCards[idx] ? "visible" : ""}`}
+            style={{
+              animationDelay: `${idx * 0.15}s`,
+            }}
+          >
+            <div className="gradient-border p-6 rounded-lg h-full hover:shadow-2xl transition-all duration-300 bg-zinc-900/50 backdrop-blur">
+              {/* Icon */}
+              <div
+                className={`icon-wrapper inline-flex p-3 rounded-lg bg-gradient-to-br ${card.color} text-white mb-4`}
+              >
+                {card.icon}
+              </div>
 
-                {/* Title */}
-                <h3 className="text-xl font-semibold font-montserrat text-white/90 mb-3">
-                  {card.title}
-                </h3>
+              {/* Title */}
+              <h3 className="text-xl font-semibold font-montserrat text-white/90 mb-3">
+                {card.title}
+              </h3>
 
-                {/* Details */}
-                <div className="space-y-2">
-                  {card.details.map((detail, didx) => (
-                    <p
-                      key={didx}
-                      className="text-sm font-quicksand text-white/70 hover:text-white/90 transition-colors"
-                    >
-                      {detail}
-                    </p>
-                  ))}
-                </div>
+              {/* Details */}
+              <div className="space-y-2">
+                {card.details.map((detail, didx) => (
+                  <p
+                    key={didx}
+                    className="text-sm font-quicksand text-white/70 hover:text-white/90 transition-colors"
+                  >
+                    {detail}
+                  </p>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

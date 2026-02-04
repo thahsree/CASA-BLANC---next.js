@@ -3,7 +3,7 @@ import ContactInfo from "@/components/ContactInfo";
 
 const page = () => {
   return (
-    <main className="pt-24 min-h-screen bg-zinc-50 dark:bg-black">
+    <main className="pt-24 min-h-scree bg-[#080808]">
       <style>{`
         @keyframes fadeInUp {
           from {

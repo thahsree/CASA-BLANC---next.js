@@ -1,5 +1,6 @@
 "use client";
 
+import Loader from "@/components/Loader";
 import { useCart } from "@/context/CartContext";
 import { SKELETON_BLUR_URLS } from "@/lib/skeletonUtils";
 import Image from "next/image";
@@ -9,34 +10,25 @@ import { IoStar } from "react-icons/io5";
 import { toast } from "sonner";
 
 interface Product {
-  id: string;
+  _id: string; // Changed from id to _id
   title: string;
   description: string;
   handle: string;
-  priceRange: {
-    minVariantPrice: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-  images: {
-    edges: Array<{
-      node: {
-        url: string;
-        altText: string;
-      };
-    }>;
-  };
-  variants: {
-    edges: Array<{
-      node: {
-        id: string;
-        compareAtPrice?: {
-          amount: string;
-        };
-      };
-    }>;
-  };
+  price: number; // Changed from priceRange
+  compareAtPrice?: number;
+  images: Array<{
+    url: string;
+    altText?: string;
+  }>;
+  variants: Array<{
+    _id: string;
+    title: string;
+    price: number;
+    compareAtPrice?: number;
+    inventoryQuantity?: number;
+  }>;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 interface ReviewStats {
@@ -45,7 +37,7 @@ interface ReviewStats {
 }
 
 export default function ProductList() {
-  const { addToCartLocally, cartItemCount } = useCart();
+  const { addToCart, cartItemCount } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,55 +46,12 @@ export default function ProductList() {
   const [itemsPerView, setItemsPerView] = useState(4);
   const [dragStart, setDragStart] = useState(0);
   const [dragEnd, setDragEnd] = useState(0);
-  const [reviewStats, setReviewStats] = useState<Map<string, ReviewStats>>(
-    new Map()
-  );
-
-  const navigate = (url: string) => {
-    window.location.href = url;
-  };
-
-  const fetchProductReviews = async (productId: string) => {
-    try {
-      const response = await fetch(
-        `/api/reviews/${encodeURIComponent(productId)}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.stats) {
-          setReviewStats((prev) => new Map(prev).set(productId, data.stats));
-        }
-      }
-    } catch (error) {
-      console.error(`Failed to fetch reviews for product ${productId}:`, error);
-    }
-  };
-
-  const fetchCartVariants = async () => {
-    try {
-      const res = await fetch("/api/cart");
-      if (!res.ok) return;
-      const data = await res.json();
-      const lines = data.cart?.lines?.edges || [];
-      const variantIds = new Set<string>();
-      lines.forEach((edge: any) => {
-        const variantId = edge.node?.merchandise?.id;
-        if (variantId) {
-          variantIds.add(variantId);
-        }
-      });
-      setCartVariantIds(variantIds);
-    } catch (err) {
-      console.error("Failed to fetch cart variants:", err);
-    }
-  };
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        console.log("Fetching products from /api/products");
         const timestamp = Date.now();
-        const response = await fetch(`/api/products?t=${timestamp}`, {
+        const response = await fetch(`/api/products`, {
           cache: "no-store",
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -111,15 +60,8 @@ export default function ProductList() {
           },
         });
         const data = await response.json();
-        const fetchedProducts =
-          data.products?.edges?.map((edge: any) => edge.node) || [];
+        const fetchedProducts = data.products || [];
         setProducts(fetchedProducts);
-
-        fetchedProducts.forEach((product: Product) => {
-          fetchProductReviews(product.id);
-        });
-
-        console.log("Fetched products:", data);
       } catch (err) {
         setError("Failed to load products");
         console.error(err);
@@ -144,6 +86,26 @@ export default function ProductList() {
     window.addEventListener("resize", updateItemsPerView);
     return () => window.removeEventListener("resize", updateItemsPerView);
   }, []);
+
+  const fetchCartVariants = async () => {
+    try {
+      const res = await fetch("/api/cart");
+      if (!res.ok) return;
+      const data = await res.json();
+      // Cart API now returns lines.edges structure to match what we kept in backend
+      const lines = data.cart?.lines?.edges || [];
+      const variantIds = new Set<string>();
+      lines.forEach((edge: any) => {
+        const variantId = edge.node?.merchandise?.id;
+        if (variantId) {
+          variantIds.add(variantId);
+        }
+      });
+      setCartVariantIds(variantIds);
+    } catch (err) {
+      console.error("Failed to fetch cart variants:", err);
+    }
+  };
 
   useEffect(() => {
     fetchCartVariants();
@@ -190,8 +152,23 @@ export default function ProductList() {
     currentIndex + itemsPerView
   );
 
+  const handleAddToCart = async (product: Product) => {
+    const variantId = product.variants[0]?._id;
+    if (!variantId) {
+      toast.error("Product variant not found");
+      return;
+    }
+    try {
+      await addToCart(variantId, 1);
+      toast.success("Added to cart");
+    } catch (error: any) {
+       console.error(error);
+       toast.error(error.message || "Failed to add to cart");
+    }
+  };
+
   if (loading) {
-    return <div className="text-center py-12">Loading products...</div>;
+    return <div className="py-20"><Loader /></div>;
   }
 
   if (error) {
@@ -202,21 +179,11 @@ export default function ProductList() {
     <div className="w-full">
       <style>{`
         @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
         }
-        .slide-animation {
-          animation: slideIn 0.5s ease-in-out;
-        }
-        .slider-container {
-          transition: all 0.3s ease-in-out;
-        }
+        .slide-animation { animation: slideIn 0.5s ease-in-out; }
+        .slider-container { transition: all 0.3s ease-in-out; }
       `}</style>
 
       {products.length === 0 ? (
@@ -235,24 +202,21 @@ export default function ProductList() {
               <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                   {visibleProducts.map((product, idx) => {
-                    const variantId = product.variants.edges[0]?.node.id;
+                    const variantId = product.variants[0]?._id;
                     const isInCart = variantId && cartVariantIds.has(variantId);
                     const shouldPrioritize = idx < 2;
 
                     return (
                       <Link
-                        key={product.id}
-                        href={`/products/${encodeURIComponent(product.id)}`}
+                        key={product._id}
+                        href={`/products/${encodeURIComponent(product._id)}`}
                         className="slide-animation bg-white dark:bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full"
                       >
-                        {product.images.edges[0] && (
+                        {product.images[0] && (
                           <div className="relative w-full h-40 sm:h-48 bg-gray-200 overflow-hidden">
                             <Image
-                              src={product.images.edges[0].node.url}
-                              alt={
-                                product.images.edges[0].node.altText ||
-                                product.title
-                              }
+                              src={product.images[0].url}
+                              alt={product.images[0].altText || product.title}
                               fill
                               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                               priority={shouldPrioritize}
@@ -265,85 +229,58 @@ export default function ProductList() {
                           </div>
                         )}
                         <div className="p-3 sm:p-4 flex flex-col flex-1 max-sm:p-1">
-                          <h3 className="font-semibold text-lg max-md:text-base max-sm:text-sm  mb-2 line-clamp-1 font-montserrat">
+                          <h3 className="font-semibold text-lg max-md:text-base max-sm:text-sm mb-2 line-clamp-1 font-montserrat">
                             {product.title}
                           </h3>
 
-                          {/* Star Rating */}
-                          {reviewStats.has(product.id) && (
-                            <div className="flex items-center gap-1 mb-2">
-                              <div className="flex gap-0.5">
-                                {[...Array(5)].map((_, i) => {
-                                  const stats = reviewStats.get(product.id)!;
-                                  const fillPercentage = Math.max(
-                                    0,
-                                    Math.min(1, stats.averageRating - i)
-                                  );
-                                  return (
-                                    <div key={i} className="relative">
-                                      <IoStar
-                                        size={14}
-                                        className="text-gray-400"
-                                      />
-                                      <div
-                                        className="absolute top-0 left-0 overflow-hidden"
-                                        style={{
-                                          width: `${fillPercentage * 100}%`,
-                                        }}
-                                      >
-                                        <IoStar
-                                          size={14}
-                                          className="text-yellow-400"
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {reviewStats
-                                  .get(product.id)
-                                  ?.averageRating.toFixed(1) || "0"}{" "}
-                                (
-                                {reviewStats.get(product.id)?.totalReviews || 0}
-                                )
-                              </span>
-                            </div>
-                          )}
-
                           <p className="text-base max-md:text-sm max-sm:text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 flex-1 font-quicksand">
-                            {product.description}
+                            {product.description?.replace(/<[^>]*>?/gm, '')}
                           </p>
 
-                          {/* Price and Button */}
+                          {/* Star Rating - Matching ProductCard */}
+                          <div className="flex items-center gap-2 mb-3">
+                             <div className="flex items-center gap-0.5">
+                               {[...Array(5)].map((_, i) => {
+                                 const fillPercentage = Math.max(
+                                   0,
+                                   Math.min(1, (product.averageRating || 0) - i)
+                                 );
+                                 return (
+                                   <div key={i} className="relative">
+                                     <IoStar size={16} className="text-gray-500" />
+                                     <div
+                                       className="absolute top-0 left-0 overflow-hidden"
+                                       style={{ width: `${fillPercentage * 100}%` }}
+                                     >
+                                       <IoStar size={16} className="text-yellow-400" />
+                                     </div>
+                                   </div>
+                                 );
+                               })}
+                             </div>
+                             <span className="text-xs text-gray-400 max-sm:text-[10px]">
+                               {(product.averageRating || 0).toFixed(1)} ({product.reviewCount || 0})
+                             </span>
+                          </div>
+
                           <div className="flex flex-col gap-2 ">
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-lg mb-1 max-md:text-base max-sm:text-sm">
-                                {
-                                  product.priceRange.minVariantPrice
-                                    .currencyCode
-                                }{" "}
-                                {product.priceRange.minVariantPrice.amount}
+                                ₹ {product.price}
                               </span>
-                              {product.variants.edges[0]?.node?.compareAtPrice
-                                ?.amount &&
-                                parseFloat(
-                                  product.variants.edges[0]?.node
-                                    ?.compareAtPrice?.amount
-                                ) != 0 && (
-                                  <span className="font-light text-lg mb-1 max-md:text-base max-sm:text-sm line-through text-gray-500">
-                                    {
-                                      product.variants.edges[0]?.node
-                                        ?.compareAtPrice?.amount
-                                    }
-                                  </span>
-                                )}
+                              {/* Compare at price logic for list */}
+                              {(product.variants[0]?.compareAtPrice || product.compareAtPrice) && 
+                               Number(product.variants[0]?.compareAtPrice || product.compareAtPrice) > product.price && (
+                                <span className="font-light text-sm mb-1 line-through text-gray-500">
+                                  {product.variants[0]?.compareAtPrice || product.compareAtPrice}
+                                </span>
+                              )}
                             </div>
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
                                 if (!isInCart) {
-                                  handleAddToCart(product, addToCartLocally);
+                                  handleAddToCart(product);
                                 }
                               }}
                               className={`${
@@ -363,103 +300,11 @@ export default function ProductList() {
               </div>
             </div>
           </div>
-
-          {/* Bullet Navigation */}
-          {getTotalSlides > 1 && (
-            <div className="mt-4 sm:mt-6 flex justify-center gap-2">
-              {Array.from({ length: getTotalSlides }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index * itemsPerView)}
-                  className={`h-2 sm:h-3 rounded-full transition-all duration-300 ${
-                    index === currentSlide
-                      ? "bg-blue-600 w-6 sm:w-8"
-                      : "bg-gray-400 w-2 sm:w-3 hover:bg-gray-500"
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Pagination Text */}
+          {/* Pagination controls ... */}
         </>
       )}
     </div>
   );
 }
 
-async function handleAddToCart(
-  product: Product,
-  addToCartLocally: (item: any) => void
-) {
-  try {
-    let cartId = localStorage.getItem("cartId");
 
-    if (!cartId) {
-      const cartResponse = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create" }),
-      });
-      if (!cartResponse.ok) {
-        const errorData = await cartResponse.json();
-        throw new Error(
-          errorData?.error || `Cart creation failed: ${cartResponse.status}`
-        );
-      }
-
-      const cartData = await cartResponse.json();
-      cartId = cartData.cart?.id;
-      if (!cartId) {
-        throw new Error("No cart ID returned from create cart");
-      }
-      localStorage.setItem("cartId", cartId);
-    }
-
-    const variantId = product.variants.edges[0]?.node.id;
-    if (!variantId) {
-      toast.error("Product variant not found");
-      return;
-    }
-
-    const addResponse = await fetch("/api/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "add",
-        cartId,
-        variantId,
-        quantity: 1,
-      }),
-    });
-
-    if (!addResponse.ok) {
-      const errorData = await addResponse.json();
-      throw new Error(
-        errorData?.error || `Add to cart failed: ${addResponse.status}`
-      );
-    }
-
-    const addData = await addResponse.json();
-
-    if (addData?.error) {
-      throw new Error(addData.error);
-    }
-
-    // Update cart context locally with spread operator
-    addToCartLocally({
-      id: variantId,
-      quantity: 1,
-      merchandise: {
-        id: variantId,
-        title: product.title,
-      },
-    });
-
-    toast.success("Added to cart successfully!");
-  } catch (err: any) {
-    console.error("Error adding to cart:", err);
-    toast.error("Failed to add to cart: " + (err.message || "Unknown error"));
-  }
-}

@@ -1,5 +1,8 @@
+import AuthProvider from "@/components/AuthProvider";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import QueryProvider from "@/components/QueryProvider";
+import SplashScreen from "@/components/SplashScreen";
 import { ToasterProvider } from "@/components/ToasterProvider";
 import { CartProvider } from "@/context/CartContext";
 import type { Metadata } from "next";
@@ -33,12 +36,17 @@ export default function RootLayout({
       <body
         className={`${interSans.variable} ${robotoMono.variable} antialiased bg-[#080808]`}
       >
-        <CartProvider>
-          <ToasterProvider />
-          <Navbar />
-          {children}
-          <Footer />
-        </CartProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <CartProvider>
+              <ToasterProvider />
+              <SplashScreen />
+              <Navbar />
+              {children}
+              <Footer />
+            </CartProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

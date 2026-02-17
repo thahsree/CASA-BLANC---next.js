@@ -3,19 +3,21 @@ import ProductList from "@/components/ProductList";
 import TrustSection from "@/components/TrustSection";
 import dynamic from "next/dynamic";
 
+import Loader from "@/components/Loader";
+
 // Lazy load below-the-fold components with custom loading state
 const LazyFaq = dynamic(() => import("@/components/CasaFaq"), {
-  loading: () => <div className="h-96 bg-zinc-900" />,
+  loading: () => <div className="h-96 bg-zinc-900 flex items-center justify-center"><Loader /></div>,
   ssr: true,
 });
 
 const LazyBenefits = dynamic(() => import("@/components/ShoppingBenefits"), {
-  loading: () => <div className="h-96 bg-zinc-900" />,
+  loading: () => <div className="h-96 bg-zinc-900 flex items-center justify-center"><Loader /></div>,
   ssr: true,
 });
 
 const LazySubscription = dynamic(() => import("@/components/Subscription"), {
-  loading: () => <div className="h-96 bg-zinc-900" />,
+  loading: () => <div className="h-96 bg-zinc-900 flex items-center justify-center"><Loader /></div>,
   ssr: true,
 });
 

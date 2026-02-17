@@ -1,14 +1,50 @@
-"use client";
 import SingleProductLanding from "@/components/SingleProductLanding";
-import { useParams } from "next/navigation";
+import dbConnect from "@/lib/mongodb";
+import Product from "@/models/Product";
+import { Metadata, ResolvingMetadata } from "next";
 
-// Dynamic product page: /products/[id]
-// Passes the URL param id to SingleProductLanding to fetch and render
-export default function ProductByIdPage() {
-  const params = useParams();
-  const rawId = (params?.id as string) || "";
-  // Decode the ID in case it's URL-encoded (Next.js usually auto-decodes, but be explicit)
-  const id = decodeURIComponent(rawId);
+type Props = {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const id = decodeURIComponent(params.id);
+
+  await dbConnect();
+
+  let product = null;
+  if (id.match(/^[0-9a-fA-F]{24}$/)) {
+    product = await Product.findById(id).lean();
+  }
+
+  if (!product) {
+    product = await Product.findOne({ handle: id }).lean();
+  }
+
+  if (!product) {
+    return {
+      title: "Product Not Found",
+    };
+  }
+
+  const previousImages = (await parent).openGraph?.images || [];
+  const productImage = product.images?.[0]?.url;
+
+  return {
+    title: product.seoTitle || product.title,
+    description: product.seoDescription || product.description,
+    openGraph: {
+      images: productImage ? [productImage, ...previousImages] : previousImages,
+    },
+  };
+}
+
+export default function ProductByIdPage({ params }: Props) {
+  const id = decodeURIComponent(params.id);
   console.log("ProductByIdPage rendering for id:", id);
   return (
     <main className="min-h-screen p-6 bg-[#0A0A0A] pt-24 text-white">

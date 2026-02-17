@@ -1,10 +1,12 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
-import { LiaPersonBoothSolid, LiaShoppingBagSolid } from "react-icons/lia";
+import { LiaShoppingBagSolid, LiaUserSolid } from "react-icons/lia";
+import SignOutButton from "./SignOutButton";
 
 const NAV_HEIGHT = 84;
 
@@ -15,11 +17,16 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const { cartItemCount } = useCart();
   const [scrolled, setScrolled] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [profileOpen, setProfileOpen] = useState<boolean>(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -30,9 +37,25 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+        if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+            setProfileOpen(false);
+        }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleCartClick = () => {
     router.push("/cart");
   };
+
+  // Hide Navbar on Admin pages
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <>
@@ -101,10 +124,61 @@ export default function Navbar() {
                 </span>
               )}
             </button>
-            {/* profile */}
-            <button className="hover:opacity-75  w-[30px] h-[30px]  max-md:w-[25px] max-md:h-[25px]  max-sm:w-6 max-sm:h-6 cursor-pointer hover:text-[#FFFFFF]">
-              <LiaPersonBoothSolid className="w-full h-full" />
-            </button>
+            
+            {/* Auth State */}
+            {session ? (
+              /* Profile Dropdown (Logged In) */
+              <div className="relative" ref={profileRef}>
+                <div className="flex justify-center items-center">
+                <button 
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="hover:opacity-75 w-[30px] h-[30px] max-md:w-[25px] max-md:h-[25px] max-sm:w-6 max-sm:h-6 cursor-pointer hover:text-[#FFFFFF]"
+                >
+                  {session.user?.image ? (
+                    <img src={session.user.image} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <LiaUserSolid className="w-full h-full" />
+                  )}
+                </button>
+                </div>
+
+                {profileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 text-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-medium truncate">{session.user?.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
+                      </div>
+                      <Link 
+                          href="/orders" 
+                          className="block px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setProfileOpen(false)}
+                      >
+                          My Orders
+                      </Link>
+                      {
+                        session.user?.role === "admin" && (
+                          <Link 
+                            href="/admin" 
+                            className="block px-4 py-2 text-sm hover:bg-gray-100"
+                            onClick={() => setProfileOpen(false)}
+                          >
+                            Admin Dashboard
+                          </Link>
+                        )
+                      }
+                      <div className="border-t border-gray-100 my-1"></div>
+                      <div className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer">
+                          <SignOutButton showIcon={false} className="w-full justify-start text-gray-800 hover:text-red-600" />
+                      </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Sign In Link (Logged Out) */
+              <Link href="/login" className="hover:opacity-75 flex justify-center items-center cursor-pointer hover:text-[#FFFFFF] transition-opacity">
+                 <LiaUserSolid className="w-[30px] h-[30px] max-md:w-[25px] max-md:h-[25px] max-sm:w-6 max-sm:h-6" />
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -137,6 +211,31 @@ export default function Navbar() {
                 </li>
               );
             })}
+             <li className="border-t border-gray-700 pt-4 mt-2">
+                <Link
+                    href="/orders"
+                    className="font-medium transition-colors block py-2 hover:text-[#FFFFFF] opacity-75"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    My Orders
+                  </Link>
+             </li>
+             {session?.user?.role === "admin" && (
+              <li>
+                  <Link
+                      href="/admin"
+                      className="font-medium transition-colors block py-2 hover:text-[#FFFFFF] opacity-75"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+              </li>
+             )}
+             <li>
+                 <div className="py-2 opacity-75">
+                    <SignOutButton text="Sign Out" className="text-white hover:text-red-400" />
+                 </div>
+             </li>
           </ul>
         </div>
       )}

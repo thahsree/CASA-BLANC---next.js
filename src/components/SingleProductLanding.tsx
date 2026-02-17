@@ -20,44 +20,22 @@ const ReviewSection = dynamic(() => import("./ReviewSection"), {
 
 type Props = { id: string };
 
-// SingleProductLanding
-// - Accepts a Shopify product ID (gid://shopify/Product/XXXX)
-// - Loads product details from `/api/products/:id` and renders a landing view
-// - Adds to cart via `/api/cart` using the first variant
 export default function SingleProductLanding({ id }: Props) {
-  console.log("SingleProductLanding mounted with id:", id);
-  const { addToCartLocally } = useCart();
-
-  const checkIfInCart = async (variantId: string) => {
-    try {
-      const res = await fetch("/api/cart");
-      if (!res.ok) return;
-      const data = await res.json();
-      const lines = data.cart?.lines?.edges || [];
-      const lineItem = lines.find(
-        (edge: any) => edge.node?.merchandise?.id === variantId
-      );
-      if (lineItem) {
-        setIsInCart(true);
-        setCartLineId(lineItem.node?.id || null);
-        setQuantity(lineItem.node?.quantity || 1);
-      } else {
-        setIsInCart(false);
-        setCartLineId(null);
-        setQuantity(1);
-      }
-    } catch (err) {
-      console.error("Failed to check if item is in cart:", err);
-    }
-  };
+  const { addToCart, cartData, isLoading: isCartLoading } = useCart();
   const [product, setProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [isInCart, setIsInCart] = useState(false);
-  const [cartLineId, setCartLineId] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+
+  // Derived state from context
+  const cartLine = cartData?.cart?.lines?.edges?.find(
+    (edge: any) => edge.node?.merchandise?.id === selectedVariantId
+  );
+  const isInCart = !!cartLine;
+
   const [updatingQuantity, setUpdatingQuantity] = useState(false);
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(
     new Set()
@@ -68,14 +46,29 @@ export default function SingleProductLanding({ id }: Props) {
     totalReviews: 0,
   });
 
+  // Sync local quantity with cart if in cart (optional, or just use separate local state for selector)
+  // For "Add to Cart" usually you start at 1. If in cart, maybe show current quantity?
+  // The UI shows a generic quantity selector.
+  // If "In Cart", the UI shows "Go to Cart" or quantity updater.
+  // The user says: "if yes , show go to cart".
+  // So we just need `isInCart`.
+
+  // We'll update the quantity state when we determine the product variant,
+  // just so it matches if we wanted to support "update cart" from here.
+  // useEffect(() => {
+  //   if (cartLine) {
+  //      setQuantity(cartLine.node.quantity);
+  //   }
+  // }, [cartLine?.node?.quantity]);
+
   // Preload all product images on mount
   const preloadImages = useCallback((images: any[]) => {
     const loaded = new Set<string>();
-    images.forEach((edge: any) => {
-      const url = edge?.node?.url;
+    images.forEach((img: any) => {
+      const url = img?.url;
       if (url) {
-        const img = new window.Image();
-        img.src = url;
+        const image = new window.Image();
+        image.src = url;
         loaded.add(url);
       }
     });
@@ -95,7 +88,6 @@ export default function SingleProductLanding({ id }: Props) {
   useEffect(() => {
     const load = async () => {
       try {
-        console.log("SingleProductLanding: Fetching product with ID:", id);
         // Add timestamp to URL to force cache bust
         const timestamp = Date.now();
         const res = await fetch(
@@ -110,7 +102,7 @@ export default function SingleProductLanding({ id }: Props) {
           }
         );
         const body = await res.json();
-        console.log("SingleProductLanding: API response:", body);
+        console.log(body,"body");
 
         if (body.error) {
           setError(body.error + (body.message ? `: ${body.message}` : ""));
@@ -120,12 +112,12 @@ export default function SingleProductLanding({ id }: Props) {
           setProduct(product);
 
           // Preload all images immediately
-          if (product?.images?.edges) {
-            preloadImages(product.images.edges);
+          if (product?.images) {
+            preloadImages(product.images);
           }
 
-          if (product?.variants?.edges?.[0]?.node?.id) {
-            await checkIfInCart(product.variants.edges[0].node.id);
+          if (product?.variants?.[0]?._id) {
+            setSelectedVariantId(product.variants[0]._id);
           }
         }
 
@@ -159,234 +151,31 @@ export default function SingleProductLanding({ id }: Props) {
   }, [id, preloadImages]);
 
   async function handleAddToCart() {
-    if (!product || addingToCart) return;
-    setAddingToCart(true);
-
+    if (!product?.variants?.[0]?._id) return;
     try {
-      let cartId = localStorage.getItem("cartId");
-
-      if (!cartId) {
-        const cartResponse = await fetch("/api/cart", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "create" }),
-        });
-
-        if (!cartResponse.ok) {
-          const errorData = await cartResponse.json();
-          throw new Error(
-            errorData?.error || `Cart creation failed: ${cartResponse.status}`
-          );
-        }
-
-        const cartData = await cartResponse.json();
-        cartId = cartData?.cart?.id;
-
-        if (!cartId) {
-          throw new Error("No cart ID returned from create cart");
-        }
-
-        localStorage.setItem("cartId", cartId);
-      }
-
-      const variantId = product?.variants?.edges?.[0]?.node?.id;
-      if (!variantId) {
-        toast.error("Product variant not found");
-        setAddingToCart(false);
-        return;
-      }
-
-      const addResponse = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add", cartId, variantId, quantity }),
-      });
-
-      if (!addResponse.ok) {
-        const errorData = await addResponse.json();
-        throw new Error(
-          errorData?.error || `Add to cart failed: ${addResponse.status}`
-        );
-      }
-
-      const addData = await addResponse.json();
-
-      if (addData?.error) {
-        throw new Error(addData.error);
-      }
-
-      // Update cart context locally (no API call needed)
-      addToCartLocally({
-        id: variantId,
-        quantity: quantity,
-        merchandise: {
-          id: variantId,
-          title: product.title,
-        },
-      });
-
-      if (variantId) {
-        await checkIfInCart(variantId);
-      }
-      toast.success("Added to cart successfully!");
-    } catch (err: any) {
-      console.error("Error adding to cart:", err);
-      toast.error("Failed to add to cart: " + (err.message || "Unknown error"));
+      setAddingToCart(true);
+      await addToCart(product.variants[0]._id, quantity);
+      toast.success("Added to cart");
+      // setIsInCart(true); // Derived from context now
+    } catch (error: any) {
+      console.error("Add to cart error", error);
+      toast.error(error.message || "Failed to add to cart");
     } finally {
       setAddingToCart(false);
     }
   }
 
   async function handleBuyNow() {
-    if (!product || addingToCart) return;
-    setAddingToCart(true);
-
-    try {
-      let cartId = localStorage.getItem("cartId");
-
-      if (!cartId) {
-        const cartResponse = await fetch("/api/cart", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "create" }),
-        });
-
-        if (!cartResponse.ok) {
-          const errorData = await cartResponse.json();
-          throw new Error(
-            errorData?.error || `Cart creation failed: ${cartResponse.status}`
-          );
-        }
-
-        const cartData = await cartResponse.json();
-        cartId = cartData?.cart?.id;
-
-        if (!cartId) {
-          throw new Error("No cart ID returned from create cart");
-        }
-
-        localStorage.setItem("cartId", cartId);
-      }
-
-      const variantId = product?.variants?.edges?.[0]?.node?.id;
-      if (!variantId) {
-        toast.error("Product variant not found");
-        setAddingToCart(false);
-        return;
-      }
-
-      const addResponse = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add", cartId, variantId, quantity }),
-      });
-
-      if (!addResponse.ok) {
-        const errorData = await addResponse.json();
-        throw new Error(
-          errorData?.error || `Add to cart failed: ${addResponse.status}`
-        );
-      }
-
-      const addData = await addResponse.json();
-
-      if (addData?.error) {
-        throw new Error(addData.error);
-      }
-
-      // Update cart context locally
-      addToCartLocally({
-        id: variantId,
-        quantity: quantity,
-        merchandise: {
-          id: variantId,
-          title: product.title,
-        },
-      });
-
-      // Fetch the updated cart to get checkout URL
-      const cartRes = await fetch("/api/cart");
-      const cartData = await cartRes.json();
-      const checkoutUrl = cartData?.cart?.checkoutUrl;
-
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-      } else {
-        throw new Error("Checkout URL not available");
-      }
-    } catch (err: any) {
-      console.error("Error in Buy Now:", err);
-      toast.error("Failed to process: " + (err.message || "Unknown error"));
-    } finally {
-      setAddingToCart(false);
-    }
+    if (!product?.variants?.[0]?._id) return;
+    const variantId = product.variants[0]._id;
+    // Redirect to checkout with variantId, quantity, and productId
+    // We use product._id or id (handle) depending on what's available, but product._id is safer for API
+    const pId = product._id || id;
+    window.location.href = `/checkout?productId=${pId}&variantId=${variantId}&quantity=${quantity}`;
   }
 
   async function handleQuantityUpdate(newQuantity: number) {
-    if (!isInCart || !cartLineId) return;
-    setUpdatingQuantity(true);
-
-    try {
-      const cartId = localStorage.getItem("cartId");
-      if (!cartId) {
-        throw new Error("No cart ID found");
-      }
-
-      const updateResponse = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update",
-          cartId,
-          lines: [
-            {
-              id: cartLineId,
-              quantity: newQuantity,
-            },
-          ],
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json();
-        throw new Error(
-          errorData?.error || `Update cart failed: ${updateResponse.status}`
-        );
-      }
-
-      const updateData = await updateResponse.json();
-
-      if (updateData?.error) {
-        throw new Error(updateData.error);
-      }
-
-      // Update cart context locally with new quantity
-      addToCartLocally({
-        id: cartLineId,
-        quantity: newQuantity,
-        merchandise: {
-          id: product?.variants?.edges?.[0]?.node?.id,
-          title: product.title,
-        },
-      });
-
-      setQuantity(newQuantity);
-    } catch (err: any) {
-      console.error("Error updating cart quantity:", err);
-      toast.error(
-        "Failed to update quantity: " + (err.message || "Unknown error")
-      );
-      // Revert quantity on error
-      const res = await fetch("/api/cart");
-      const data = await res.json();
-      const lines = data.cart?.lines?.edges || [];
-      const lineItem = lines.find((edge: any) => edge.node?.id === cartLineId);
-      if (lineItem) {
-        setQuantity(lineItem.node?.quantity || 1);
-      }
-    } finally {
-      setUpdatingQuantity(false);
-    }
+    
   }
 
   if (loading) return <SingleProductSkeleton />;
@@ -396,7 +185,7 @@ export default function SingleProductLanding({ id }: Props) {
       <div className="p-6">Product not found. Check console for details.</div>
     );
 
-  const heroImage = product.images?.edges?.[selectedImageIndex]?.node;
+  const heroImage = product.images?.[selectedImageIndex];
   const heroImageUrl = heroImage?.url;
   const isHeroLoaded = heroImageUrl && loadedImages.has(heroImageUrl);
 
@@ -406,8 +195,8 @@ export default function SingleProductLanding({ id }: Props) {
     const message = `Check out this amazing product from Casa Blancc: ${
       product.title
     }\n\n${product.description || ""}\n\nPrice: ${
-      product.priceRange?.minVariantPrice?.currencyCode
-    } ${product.priceRange?.minVariantPrice?.amount}\n\n${productUrl}`;
+      product.price
+    }\n\n${productUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -419,7 +208,7 @@ export default function SingleProductLanding({ id }: Props) {
           {/* Hero Image with Skeleton */}
           <div className="relative w-full h-[500px] max-sm:h-80 rounded overflow-hidden bg-zinc-800">
             {!isHeroLoaded && (
-              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] animation-shimmer" />
+              <div className="absolute inset-0 bg-zinc-700/50 animate-pulse" />
             )}
             {heroImage && (
               <Image
@@ -442,8 +231,8 @@ export default function SingleProductLanding({ id }: Props) {
 
           {/* Thumbnail Images with Skeleton */}
           <div className="mt-4 grid grid-cols-4 gap-3">
-            {product.images?.edges?.map((e: any, idx: number) => {
-              const imageUrl = e.node?.url;
+            {product.images?.map((img: any, idx: number) => {
+              const imageUrl = img?.url;
               const isPreloaded = preloadedImages.has(imageUrl);
               const isLoaded = loadedImages.has(imageUrl);
 
@@ -459,11 +248,11 @@ export default function SingleProductLanding({ id }: Props) {
                 >
                   {/* Skeleton loader */}
                   {!isLoaded && (
-                    <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] animation-shimmer" />
+                    <div className="absolute inset-0 bg-zinc-700/50 animate-pulse" />
                   )}
                   <Image
-                    src={e.node.url}
-                    alt={e.node.altText || product.title}
+                    src={img.url}
+                    alt={img.altText || product.title}
                     fill
                     sizes="100px"
                     className={`object-cover transition-opacity duration-300 ${
@@ -521,20 +310,14 @@ export default function SingleProductLanding({ id }: Props) {
                          text-[50px] max-sm:text-[28px] max-md:text-[40px] text-white/90"
             >
               {"₹ "}{" "}
-              {parseFloat(product.priceRange?.minVariantPrice?.amount).toFixed(
-                0
-              )}
+              {parseFloat(product.price).toFixed(0)}
             </div>
-            {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount && (
+            {product.compareAtPrice && product.compareAtPrice > product.price && (
               <div
                 className="font-montserrat font-light opacity-60 tracking-tight
                          text-[50px] max-sm:text-[28px] max-md:text-[40px] line-through text-gray-500"
               >
-                {product.variants?.edges?.[0]?.node?.compareAtPrice?.amount == 0
-                  ? ""
-                  : parseFloat(
-                      product.variants?.edges?.[0]?.node?.compareAtPrice?.amount
-                    ).toFixed(0)}
+                {parseFloat(product.compareAtPrice).toFixed(0)}
               </div>
             )}
           </div>
@@ -548,9 +331,9 @@ export default function SingleProductLanding({ id }: Props) {
             >
               {/* Mobile: Product info */}
               <div className="hidden max-sm:flex items-center gap-3">
-                {product.images?.edges?.[0]?.node?.url && (
+                {product.images?.[0]?.url && (
                   <img
-                    src={product.images.edges[0].node.url}
+                    src={product.images[0].url}
                     alt={product.title}
                     className="w-12 h-12 object-cover rounded"
                     loading="lazy"
@@ -560,32 +343,29 @@ export default function SingleProductLanding({ id }: Props) {
                   <p className="text-xs font-semibold line-clamp-2">
                     {product.title}
                   </p>
-                  <p className="text-sm font-bold">
+                 <div className="flex gap-2">
+                   <p className="text-sm font-bold">
                     ₹{" "}
-                    {parseFloat(
-                      product.priceRange?.minVariantPrice?.amount
-                    ).toFixed(0)}
+                    {parseFloat(product.price).toFixed(0)}
                   </p>
+                   <p className="text-sm line-through font-normal">
+                    
+                    {parseFloat(product.compareAtPrice&& product.compareAtPrice>product.price?product.compareAtPrice:product.price).toFixed(0)}
+                  </p>
+                 </div>
                 </div>
               </div>
 
               {/* Buy Now text (right side on mobile) */}
-              <span>{addingToCart ? "Processing..." : "Buy Now"}</span>
+              <span>Buy Now</span>
             </button>
 
             {/* SECONDARY - Quantity + Add to Cart (Compact Row) */}
             <div className="flex gap-2 max-sm:hidden">
               <div className="flex items-center border border-[#C9B27B] rounded text-[#C9B27B]">
                 <button
-                  onClick={() => {
-                    const newQty = Math.max(1, quantity - 1);
-                    if (isInCart) {
-                      handleQuantityUpdate(newQty);
-                    } else {
-                      setQuantity(newQty);
-                    }
-                  }}
-                  disabled={addingToCart || updatingQuantity || quantity <= 1}
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={addingToCart || quantity <= 1}
                   className="px-3 py-3 shadow-lg font-montserrat font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   −
@@ -594,15 +374,8 @@ export default function SingleProductLanding({ id }: Props) {
                   {quantity}
                 </span>
                 <button
-                  onClick={() => {
-                    const newQty = Math.min(5, quantity + 1);
-                    if (isInCart) {
-                      handleQuantityUpdate(newQty);
-                    } else {
-                      setQuantity(newQty);
-                    }
-                  }}
-                  disabled={addingToCart || updatingQuantity || quantity >= 5}
+                  onClick={() => setQuantity(Math.min(5, quantity + 1))}
+                  disabled={addingToCart || quantity >= 5}
                   className="px-3 py-2 font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   +
@@ -631,15 +404,8 @@ export default function SingleProductLanding({ id }: Props) {
             <div className="hidden max-sm:flex gap-2">
               <div className="flex items-center border border-[#C9B27B] rounded text-[#C9B27B]">
                 <button
-                  onClick={() => {
-                    const newQty = Math.max(1, quantity - 1);
-                    if (isInCart) {
-                      handleQuantityUpdate(newQty);
-                    } else {
-                      setQuantity(newQty);
-                    }
-                  }}
-                  disabled={addingToCart || updatingQuantity || quantity <= 1}
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={addingToCart || quantity <= 1}
                   className="px-3 py-2 font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   −
@@ -648,15 +414,8 @@ export default function SingleProductLanding({ id }: Props) {
                   {quantity}
                 </span>
                 <button
-                  onClick={() => {
-                    const newQty = Math.min(5, quantity + 1);
-                    if (isInCart) {
-                      handleQuantityUpdate(newQty);
-                    } else {
-                      setQuantity(newQty);
-                    }
-                  }}
-                  disabled={addingToCart || updatingQuantity || quantity >= 5}
+                  onClick={() => setQuantity(Math.min(5, quantity + 1))}
+                  disabled={addingToCart || quantity >= 5}
                   className="px-3 py-2 font-semibold hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   +
@@ -689,58 +448,82 @@ export default function SingleProductLanding({ id }: Props) {
           </div>
 
           {/* Product Details - Below CTA */}
-          <div className="pt-4 border-t border-gray-700 pb-6 max-sm:pb-1">
-            {(product.descriptionHtml || product.description) && (
-              <div className="text-white/70 font-quicksand leading-relaxed">
-                {product.descriptionHtml ? (
-                  /* PRIORITY: Render HTML from Shopify if available */
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: product.descriptionHtml,
-                    }}
-                    className="prose prose-invert max-w-none 
-            [&_h3]:text-[24px] max-sm:[&_h3]:text-[16px] [&_h3]:font-montserrat [&_h3]:font-bold [&_h3]:text-white/90 [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:pt-3
-            [&_p]:text-[16px] [&_p]:font-quicksand [&_p]:mb-4 [&_p]:leading-relaxed
-            [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
-            [&_li]:mb-2
-            [&_strong]:text-white/80 [&_strong]:font-bold
-            [&_hr]:my-6 [&_hr]:border-gray-700"
-                  />
-                ) : (
-                  /* FALLBACK: Your existing logic for plain text */
-                  (() => {
-                    const desc = product.description;
+{/* Product Details - Below CTA */}
+<div className="pt-4 border-t border-gray-700 pb-6 max-sm:pb-1">
+  {typeof product.description === "string" &&
+    product.description.trim().length > 0 && (
+      <div className="ql-snow">
+        <div
+          className="
+            ql-editor
+            text-[1em] md:text-[1.15em]
+            leading-loose
+            font-quicksand
+            text-white/70
+            [&_p]:text-white/70
+            [&_strong]:text-white/90
+            
 
-                    // Legacy check in case descriptionHtml is missing but description has tags
-                    if (/<[^>]+>/.test(desc)) {
-                      return (
-                        <div
-                          dangerouslySetInnerHTML={{ __html: desc }}
-                          className="prose prose-invert max-w-none [&_h3]:text-[#C9B27B]"
-                        />
-                      );
-                    }
+            /* Responsive Header Padding & Styling */
+            [&_h1]:font-montserrat [&_h1]:text-white/90 [&_h1]:!mt-6 [&_h1]:md:!mt-8 [&_h1]:!mb-4
+            [&_h2]:font-montserrat [&_h2]:text-white/90 [&_h2]:!mt-5 [&_h2]:md:!mt-7 [&_h2]:!mb-3
+            [&_h3]:font-montserrat [&_h3]:text-white/90 [&_h3]:!mt-4 [&_h3]:md:!mt-6 [&_h3]:!mb-3
+            [&_h4]:font-montserrat [&_h4]:text-white/90 [&_h4]:!mt-3 [&_h4]:md:!mt-5 [&_h4]:!mb-2
+            [&_h5]:font-montserrat [&_h5]:text-white/90 [&_h5]:!mt-3 [&_h5]:md:!mt-4 [&_h5]:!mb-2
+            [&_h6]:font-montserrat [&_h6]:text-white/90 [&_h6]:!mt-2 [&_h6]:md:!mt-3 [&_h6]:!mb-2
 
-                    const paragraphs = desc
-                      .split(/\n\n+/)
-                      .map((p: string) => p.trim())
-                      .filter((p: string) => p);
+            [&_ul]:!pl-0
+            [&_ol]:!pl-0
+            [&_ul]:!list-disc
+            [&_ul]:!list-outside
+            [&_ol]:!list-outside
 
-                    return paragraphs.map((paragraph: string, idx: number) => {
-                      // ... (Your existing plain text parsing logic remains here)
-                      const lines = paragraph
-                        .split("\n")
-                        .map((l: string) => l.trim())
-                        .filter((l: string) => l);
-                      // ... copy the rest of your existing plain text parser logic here for safety
-                      return <p key={idx}>{paragraph}</p>; // Simplified fallback example
-                    });
-                  })()
-                )}
-              </div>
-            )}
-            <DeliveryCheck />
-          </div>
+
+            /* ===== TABLE FIX START ===== */
+            [&_table]:!w-full
+            [&_table]:!border-collapse
+            [&_table]:!border
+            [&_table]:!border-zinc-700
+            [&_table]:!my-6
+
+            [&_thead]:!border
+            [&_thead]:!border-zinc-700
+            
+            [&_tbody]:!border
+            [&_tbody]:!border-zinc-700
+
+            [&_tr]:!border
+            [&_tr]:!border-b
+            [&_tr]:!border-zinc-700
+
+            [&_td]:!border
+            [&_td]:!border-zinc-700
+            [&_td]:!p-3
+            [&_td]:!align-middle
+            [&_td]:!text-center
+
+            [&_th]:!border
+            [&_th]:!border-zinc-700
+            [&_th]:!p-3
+            [&_th]:!text-center
+            [&_th]:!align-middle
+            [&_th]:!font-montserrat
+            [&_th]:!font-semibold
+            [&_th]:!text-white/90
+            /* ===== TABLE FIX END ===== */
+          "
+          dangerouslySetInnerHTML={{
+            __html: product.description
+              .replace(/&nbsp;/gi, " ")
+              .replace(/\u00A0/g, " "),
+          }}
+        />
+      </div>
+    )}
+
+  <DeliveryCheck />
+</div>
+   
 
           {/* Share - BELOW THE FOLD */}
           <div className="pt-4 max-sm:pt-1">

@@ -1,7 +1,15 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const Footer = () => {
+  const pathname = usePathname();
   const currentYear = new Date().getFullYear();
+
+  // Hide Footer on Admin pages
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <footer className="w-full">

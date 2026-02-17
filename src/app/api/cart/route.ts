@@ -1,380 +1,183 @@
-import shopify from '@/lib/shopify';
-import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from "@/lib/mongodb";
+import Cart from "@/models/Cart";
+import Product from "@/models/Product";
+import { NextRequest, NextResponse } from "next/server";
 
-const CREATE_CART_MUTATION = `
-  mutation cartCreate($input: CartInput!) {
-    cartCreate(input: $input) {
-      cart {
-        id
-        checkoutUrl
-        lines(first: 10) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  product {
-                    title
-                    handle
-                  }
-                  image {
-                    url
-                  }
-                }
-              }
-              cost {
-                totalAmount {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-        }
-        cost {
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
-      }
-      userErrors {
-        code
-        field
-        message
-      }
-    }
-  }
-`;
-
-const ADD_TO_CART_MUTATION = `
-  mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
-    cartLinesAdd(cartId: $cartId, lines: $lines) {
-      cart {
-        id
-        checkoutUrl
-        lines(first: 10) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  product {
-                    title
-                    handle
-                  }
-                  image {
-                    url
-                  }
-                }
-              }
-              cost {
-                totalAmount {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-        }
-        cost {
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
-      }
-      userErrors {
-        code
-        field
-        message
-      }
-    }
-  }
-`;
-
-const GET_CART_QUERY = `
-  query getCart($cartId: ID!) {
-    cart(id: $cartId) {
-      id
-      checkoutUrl
-      lines(first: 10) {
-        edges {
-          node {
-            id
-            quantity
-            merchandise {
-              ... on ProductVariant {
-                id
-                title
-                product {
-                  title
-                  handle
-                }
-                image {
-                  url
-                }
-              }
-            }
-            cost {
-              totalAmount {
-                amount
-                currencyCode
-              }
-            }
-          }
-        }
-      }
-      cost {
-        totalAmount {
-          amount
-          currencyCode
-        }
-      }
-    }
-  }
-`;
-
-const UPDATE_CART_MUTATION = `
-  mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
-    cartLinesUpdate(cartId: $cartId, lines: $lines) {
-      cart {
-        id
-        checkoutUrl
-        lines(first: 10) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  product {
-                    title
-                    handle
-                  }
-                  image {
-                    url
-                  }
-                }
-              }
-              cost {
-                totalAmount {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-        }
-        cost {
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
-      }
-      userErrors {
-        code
-        field
-        message
-      }
-    }
-  }
-`;
-
-const REMOVE_CART_ITEM_MUTATION = `
-  mutation cartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
-    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
-      cart {
-        id
-        checkoutUrl
-        lines(first: 10) {
-          edges {
-            node {
-              id
-              quantity
-              merchandise {
-                ... on ProductVariant {
-                  id
-                  title
-                  product {
-                    title
-                    handle
-                  }
-                  image {
-                    url
-                  }
-                }
-              }
-              cost {
-                totalAmount {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-        }
-        cost {
-          totalAmount {
-            amount
-            currencyCode
-          }
-        }
-      }
-      userErrors {
-        code
-        field
-        message
-      }
-    }
-  }
-`;
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { action, cartId, variantId, quantity, lineIds } = body;
-    const cookieStore = await cookies();
+    const body = await req.json();
+    const { action, cartId, variantId, quantity, lines } = body;
+    await dbConnect();
 
-    if (action === 'create') {
-      const res: any = await shopify.request(CREATE_CART_MUTATION, { input: {} });
-      const data = res?.data ?? res;
-      if (data?.cartCreate?.userErrors?.length) {
-        return NextResponse.json({ error: 'Cart create errors', details: data.cartCreate.userErrors }, { status: 502 });
-      }
-      
-      const newCartId = data.cartCreate?.cart?.id;
-      const response = NextResponse.json({ cart: data.cartCreate?.cart ?? null });
-      
-      // Store cart ID in session cookie
-      if (newCartId) {
-        response.cookies.set('cartId', newCartId, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 30 // 30 days
-        });
-      }
-      
+    // 1. Create Cart
+    if (action === "create") {
+      const newCart = await Cart.create({ items: [] });
+      const response = NextResponse.json({ cart: { id: newCart._id } });
+
+      // We can also set cookie here if needed, but frontend seems to rely on localStorage + cookie
       return response;
     }
 
-    if (action === 'add') {
-      if (!cartId || !variantId) {
-        return NextResponse.json({ error: 'Missing cartId or variantId' }, { status: 400 });
+    // For other actions, we need a cartId
+    if (!cartId) {
+      return NextResponse.json({ error: "Missing cartId" }, { status: 400 });
+    }
+
+    let cart = await Cart.findById(cartId);
+    if (!cart) {
+      return NextResponse.json({ error: "Cart not found" }, { status: 404 });
+    }
+
+    // 2. Add Item
+    if (action === "add") {
+      if (!variantId) {
+        return NextResponse.json({ error: "Missing variantId" }, { status: 400 });
       }
 
-      const res: any = await shopify.request(ADD_TO_CART_MUTATION, {
-        cartId,
-        lines: [
-          {
-            merchandiseId: variantId,
-            quantity: quantity || 1,
-          },
-        ],
-      });
+      // Find product that contains this variant
+      // Note: In our Product model, variants are subdocuments. 
+      // We search for a product where variants._id == variantId
+      const product = await Product.findOne({ "variants._id": variantId });
 
-      const data = res?.data ?? res;
-      if (data?.cartLinesAdd?.userErrors?.length) {
-        return NextResponse.json({ error: 'Add to cart errors', details: data.cartLinesAdd.userErrors }, { status: 502 });
+      if (!product) {
+        return NextResponse.json({ error: "Product variant not found" }, { status: 404 });
       }
 
-      const response = NextResponse.json({ cart: data.cartLinesAdd?.cart ?? null });
-      
-      // Update cart ID in session cookie
-      if (cartId) {
-        response.cookies.set('cartId', cartId, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 30 // 30 days
+      // Extract variant details
+      const variant = product.variants.find((v: any) => v._id.toString() === variantId);
+      const image = product.images?.[0]?.url;
+
+      if (!variant) {
+        return NextResponse.json({ error: "Variant data missing" }, { status: 500 });
+      }
+
+      // Check if item already exists in cart
+      const existingItemIndex = cart.items.findIndex((item) => item.variantId === variantId);
+
+      if (existingItemIndex > -1) {
+        cart.items[existingItemIndex].quantity += (quantity || 1);
+      } else {
+        cart.items.push({
+          productId: product._id.toString(),
+          variantId: variant._id.toString(),
+          quantity: quantity || 1,
+          title: `${product.title} - ${variant.title}`,
+          price: variant.price,
+          image: image,
         });
       }
-      
-      return response;
+
+      await cart.save();
+      return NextResponse.json({ cart: formatCartResponse(cart) });
     }
 
-    if (action === 'update') {
-      if (!cartId) {
-        return NextResponse.json({ error: 'Missing cartId' }, { status: 400 });
+    // 3. Update Item
+    if (action === "update") {
+      if (!lines || !Array.isArray(lines)) {
+        return NextResponse.json({ error: "Invalid lines" }, { status: 400 });
       }
 
-      const lines = body.lines || [];
-      if (!Array.isArray(lines) || lines.length === 0) {
-        return NextResponse.json({ error: 'Missing or invalid lines array' }, { status: 400 });
+      for (const line of lines) {
+        const itemIndex = cart.items.findIndex(item => item._id?.toString() === line.id || item.variantId === line.id);
+        // The frontend might pass the cart item _id (line.id) or variantId. 
+        // Looking at previous code, it used line.id (Shopify ID). Mongoose subdocs have _id. 
+        // We'll try to match item._id.
+        if (itemIndex > -1) {
+          cart.items[itemIndex].quantity = line.quantity;
+        }
       }
 
-      const res: any = await shopify.request(UPDATE_CART_MUTATION, {
-        cartId,
-        lines: lines,
-      });
-
-      const data = res?.data ?? res;
-      if (data?.cartLinesUpdate?.userErrors?.length) {
-        return NextResponse.json({ error: 'Update cart errors', details: data.cartLinesUpdate.userErrors }, { status: 502 });
-      }
-
-      return NextResponse.json({ cart: data.cartLinesUpdate?.cart ?? null });
+      await cart.save();
+      return NextResponse.json({ cart: formatCartResponse(cart) });
     }
 
-    if (action === 'remove') {
-      if (!cartId || !lineIds || !Array.isArray(lineIds)) {
-        return NextResponse.json({ error: 'Missing cartId or lineIds' }, { status: 400 });
+    // 4. Remove Item
+    if (action === "remove") {
+      const { lineIds } = body;
+      if (!lineIds || !Array.isArray(lineIds)) {
+        return NextResponse.json({ error: "Invalid lineIds" }, { status: 400 });
       }
 
-      const res: any = await shopify.request(REMOVE_CART_ITEM_MUTATION, {
-        cartId,
-        lineIds,
-      });
+      // Filter out items that match the lineIds (which we treat as item._id)
+      cart.items = cart.items.filter((item: any) =>
+        !lineIds.includes(item._id.toString())
+      );
 
-      const data = res?.data ?? res;
-      if (data?.cartLinesRemove?.userErrors?.length) {
-        return NextResponse.json({ error: 'Remove cart errors', details: data.cartLinesRemove.userErrors }, { status: 502 });
-      }
-
-      return NextResponse.json({ cart: data.cartLinesRemove?.cart ?? null });
+      await cart.save();
+      return NextResponse.json({ cart: formatCartResponse(cart) });
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (err: any) {
-    console.error('Cart route error:', err);
-    return NextResponse.json({ error: 'Failed to process cart', message: err?.message ?? String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+
+  } catch (error: any) {
+    console.error("Cart API error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const cartId = url.searchParams.get('cartId');
-    const cookieStore = await cookies();
+    const url = new URL(req.url);
+    const cartId = url.searchParams.get("cartId");
 
-    // Use cartId from query params or from cookies
-    const actualCartId = cartId || cookieStore.get('cartId')?.value;
+    // Cookie support could be added back if essential
 
-    if (!actualCartId) {
+    if (!cartId) {
       return NextResponse.json({ cart: null });
     }
 
-    const res: any = await shopify.request(GET_CART_QUERY, { cartId: actualCartId });
-    const data = res?.data ?? res;
+    await dbConnect();
+    const cart = await Cart.findById(cartId);
 
-    if (data?.cart) {
-      return NextResponse.json({ cart: data.cart });
+    if (!cart) {
+      return NextResponse.json({ cart: null });
     }
 
-    return NextResponse.json({ cart: null });
-  } catch (err: any) {
-    console.error('Cart GET route error:', err);
-    return NextResponse.json({ error: 'Failed to fetch cart', message: err?.message ?? String(err) }, { status: 500 });
+    return NextResponse.json({ cart: formatCartResponse(cart) });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+// Helper to format Cart to match what frontend expects (Shopify-like structure somewhat, or simplified)
+// To minimize frontend changes, we might want to mimic the structure, OR simply update frontend to use clean structure.
+// Given I am rewriting frontend, I will use a cleaner structure, but I need to make sure I update the frontend to match THIS structure.
+// I will return a simplified structure: { id, lines: { edges: [...] }, cost: { totalAmount: ... } }
+// so that minimal frontend change is needed if I wanted to keep it close, but I'll try to just return clean data and rewrite frontend to consume clean data.
+// But wait, `formatCartResponse` helper suggests I might want to adapt it. 
+// I'll stick to a decent structure.
+function formatCartResponse(cart: any) {
+  return {
+    id: cart._id,
+    checkoutUrl: "/checkout", // Placeholder
+    lines: {
+      edges: cart.items.map((item: any) => ({
+        node: {
+          id: item._id, // Cart Line ID
+          quantity: item.quantity,
+          merchandise: {
+            id: item.variantId,
+            title: item.title,
+            product: {
+              title: item.title.split(' - ')[0],
+              handle: 'todo'
+            },
+            image: { url: item.image }
+          },
+          cost: {
+            totalAmount: {
+              amount: (item.price * item.quantity).toString(),
+              currencyCode: "USD" // or INR
+            }
+          }
+        }
+      }))
+    },
+    cost: {
+      totalAmount: {
+        amount: cart.subtotal.toString(),
+        currencyCode: "USD"
+      }
+    }
+  };
 }

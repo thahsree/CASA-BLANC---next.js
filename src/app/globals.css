@@ -1,5 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Abel&family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Quicksand:wght@300;400;500;600;700&family=Ivymode&display=swap");
 @import "tailwindcss";
+@import "quill/dist/quill.snow.css";
+@import "react-quill/dist/quill.snow.css";
 
 :root {
   --background: #080808;
@@ -37,6 +39,7 @@ select {
   background-color: transparent;
   color: rgba(255, 255, 255, 0.9);
 }
+
 select option {
   background-color: white;
   color: #000;
@@ -52,6 +55,7 @@ select option:checked {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }

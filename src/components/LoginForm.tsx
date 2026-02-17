@@ -1,74 +1,40 @@
 "use client";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { FaGithub } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 
-// LoginForm: simple client-side form example. In a production app you would
-// authenticate against your backend (e.g., NextAuth or a custom API).
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Example: call a backend API route for authentication
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message || "Login failed");
-      }
-
-      // On success you might set a cookie/session and redirect
-      window.location.href = "/"; // redirect to home
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setLoading(false);
-    }
+  const handleLogin = async (provider: string) => {
+    setLoading(provider);
+    await signIn(provider, { callbackUrl: "/" });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <div className="text-red-600">{error}</div>}
-
-      <label className="block">
-        <span className="text-sm font-medium">Email</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="mt-1 block w-full px-3 py-2 border rounded"
-        />
-      </label>
-
-      <label className="block">
-        <span className="text-sm font-medium">Password</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="mt-1 block w-full px-3 py-2 border rounded"
-        />
-      </label>
+    <div className="space-y-4">
+      <button
+        onClick={() => handleLogin("google")}
+        disabled={!!loading}
+        className="w-full flex items-center justify-center gap-2 bg-white text-black border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 transition-colors"
+      >
+        <div className="w-5 h-5 flex items-center justify-center">
+            <FcGoogle size={20} />
+        </div>
+        {loading === "google" ? "Signing in..." : "Sign in with Google"}
+      </button>
 
       <button
-        type="submit"
-        className="w-full bg-[#C9B27B] text-black px-4 py-2 rounded font-semibold"
-        disabled={loading}
+        onClick={() => handleLogin("github")}
+        disabled={!!loading}
+        className="w-full flex items-center justify-center gap-2 bg-[#24292F] text-white px-4 py-2 rounded hover:bg-[#24292F]/90 transition-colors"
       >
-        {loading ? "Signing in..." : "Sign in"}
+        <div className="w-5 h-5 flex items-center justify-center">
+             <FaGithub size={20} />
+        </div>
+        {loading === "github" ? "Signing in..." : "Sign in with GitHub"}
       </button>
-    </form>
+    </div>
   );
 }

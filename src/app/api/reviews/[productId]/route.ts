@@ -4,14 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ productId: string }> }
+  { params }: { params: { productId: string } }
 ) {
   try {
-    const { productId } = await params;
-    
+    const { productId } = params;
+
     // Decode the product ID
     const decodedProductId = decodeURIComponent(productId);
-    
+
     console.log("Reviews API - Raw productId:", productId);
     console.log("Reviews API - Decoded productId:", decodedProductId);
 
@@ -54,7 +54,7 @@ export async function GET(
     // Try each query format
     for (const query of queries) {
       console.log("Reviews API - Trying query:", query);
-      
+
       // Fetch paginated reviews for this product, sorted by newest first
       const foundReviews = await Review.find(query)
         .sort({ createdAt: -1 })
@@ -63,47 +63,40 @@ export async function GET(
         .lean()
         .maxTimeMS(8000);
 
-      // Get total count and calculate stats more efficiently
+      // Get total count (for pagination)
       const foundTotal = await Review.countDocuments(query)
         .maxTimeMS(8000);
-      
-      console.log("Reviews API - Query result count:", foundReviews.length, "Total:", foundTotal);
 
       if (foundReviews.length > 0 || foundTotal > 0) {
         reviews = foundReviews;
         totalReviews = foundTotal;
-        console.log("Reviews API - Found reviews with query:", query);
-        
-        // Get stats with timeout
-        if (totalReviews > 0) {
-          try {
-            const statsResult = await Review.aggregate([
-              { $match: query },
-              {
-                $group: {
-                  _id: null,
-                  totalReviews: { $sum: 1 },
-                  averageRating: { $avg: "$rating" },
-                  rating1: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
-                  rating2: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
-                  rating3: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
-                  rating4: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
-                  rating5: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
-                },
-              },
-            ]);
-            
-            stats = statsResult[0] || stats;
-          } catch (statsError) {
-            console.warn("Stats calculation timed out, using basic calculation", statsError);
-            // Fallback to simple calculation
-            const allRatings = reviews.map((r) => r.rating);
-            stats.totalReviews = totalReviews;
-            stats.averageRating = allRatings.length > 0 
-              ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length 
-              : 0;
-          }
+
+        // Fetch Product for correct stats (Buckets Strategy)
+        // We do this inside the loop only if we found reviews or are about to return empty for a valid product
+        // But optimally we should just fetch the product once. 
+        // Refactoring to fetch product stats regardless of reviews existence, if possible.
+        // But user instructions for stats were specific. 
+        // Let's implement dynamic calculation here.
+
+        const Product = (await import("@/models/Product")).default;
+        const product = await Product.findById(decodedProductId).lean();
+
+        if (product) {
+          const rCount = product.reviewCount || 0;
+          const rTotal = product.ratingTotal || 0;
+          const avg = rCount > 0 ? rTotal / rCount : 0;
+
+          stats = {
+            totalReviews: rCount,
+            averageRating: avg,
+            rating1: product.ratingStats?.[1] || 0,
+            rating2: product.ratingStats?.[2] || 0,
+            rating3: product.ratingStats?.[3] || 0,
+            rating4: product.ratingStats?.[4] || 0,
+            rating5: product.ratingStats?.[5] || 0,
+          };
         }
+
         break; // Found reviews, stop trying other queries
       }
     }
@@ -144,105 +137,90 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ productId: string }> }
+  { params }: { params: { productId: string } }
 ) {
   try {
-    const { productId } = await params;
-    const decodedProductId = decodeURIComponent(productId);
-    
-    console.log("POST Reviews API - Raw productId:", productId);
-    console.log("POST Reviews API - Decoded productId:", decodedProductId);
-    
-    const body = await req.json();
-
-    const { authorName, email, rating, title, content, images } = body;
-
-    // Validation
-    if (!productId) {
-      return NextResponse.json(
-        { error: "Product ID is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!authorName?.trim()) {
-      return NextResponse.json(
-        { error: "Author name is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!email?.trim()) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
-    }
-
-    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Invalid email format" },
-        { status: 400 }
-      );
-    }
-
-    if (!rating || rating < 1 || rating > 5) {
-      return NextResponse.json(
-        { error: "Rating must be between 1 and 5" },
-        { status: 400 }
-      );
-    }
-
-    if (!title?.trim()) {
-      return NextResponse.json(
-        { error: "Review title is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!content?.trim()) {
-      return NextResponse.json(
-        { error: "Review content is required" },
-        { status: 400 }
-      );
-    }
-
     await connectToDatabase();
 
-    // Create new review
-    const newReview = new Review({
+    const { productId } = params;
+    const decodedProductId = decodeURIComponent(productId);
+
+    const body = await req.json();
+    const { authorName, email, rating, title, content, images } = body;
+
+    // -------- Basic Validation --------
+    if (!decodedProductId)
+      return NextResponse.json({ error: "Product ID required" }, { status: 400 });
+
+    if (!authorName?.trim())
+      return NextResponse.json({ error: "Author name required" }, { status: 400 });
+
+    if (!email?.trim())
+      return NextResponse.json({ error: "Email required" }, { status: 400 });
+
+    if (!rating || rating < 1 || rating > 5)
+      return NextResponse.json({ error: "Rating must be 1-5" }, { status: 400 });
+
+    if (!title?.trim())
+      return NextResponse.json({ error: "Title required" }, { status: 400 });
+
+    if (!content?.trim())
+      return NextResponse.json({ error: "Content required" }, { status: 400 });
+
+    // -------- Create Review --------
+    // We rely on unique index (productId + email) for duplicate prevention.
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0];
+
+    const newReview = await Review.create({
       productId: decodedProductId,
       authorName: authorName.trim(),
       email: email.toLowerCase().trim(),
-      rating: parseInt(rating),
+      rating: Number(rating),
       title: title.trim(),
       content: content.trim(),
       images: Array.isArray(images) ? images : [],
-      published: false, // Default to unpublished, requires moderation
+      published: true,
+      ipAddress: ip,
     });
 
-    await newReview.save();
+    // -------- Atomic Product Update --------
+    const Product = (await import("@/models/Product")).default;
 
-    console.log("✅ Review created successfully:", newReview._id);
+    const ratingKey = `ratingStats.${rating}`;
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      decodedProductId,
+      {
+        $inc: {
+          reviewCount: 1,
+          ratingTotal: Number(rating),
+          [ratingKey]: 1,
+        },
+      },
+      { new: true, strict: false } // strict: false ensures ratingTotal is written even if schema is stale
+    );
+
+    if (!updatedProduct) {
+      console.error("Product not found for review:", decodedProductId);
+    }
 
     return NextResponse.json(
       {
         success: true,
-        message: "Review submitted successfully! It will be published after moderation.",
+        message: "Review submitted successfully",
         review: newReview,
       },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("❌ POST /api/reviews error:", error);
+    console.error("POST /reviews error:", error);
 
-    // Handle validation errors from Mongoose
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors)
-        .map((e: any) => e.message)
-        .join(", ");
-      return NextResponse.json({ error: messages }, { status: 400 });
+    // Duplicate review (unique index)
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { error: "You have already reviewed this product." },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json(

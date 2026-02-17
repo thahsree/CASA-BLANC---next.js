@@ -1,78 +1,53 @@
-import shopify from '@/lib/shopify';
-import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from "@/lib/mongodb";
+import Product from "@/models/Product";
+import { NextRequest, NextResponse } from "next/server";
 
-export const revalidate = 0; // No caching - always fetch fresh from Shopify
+export const revalidate = 0;
 
-const PRODUCTS_QUERY = `
-  query {
-    products(first: 100, sortKey: CREATED_AT, reverse: true) {
-      edges {
-        node {
-          id
-          title
-          description
-          handle
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 1) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-          variants(first: 1) {
-            edges {
-              node {
-                id
-                compareAtPrice {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const res: any = await shopify.request(PRODUCTS_QUERY);
+    await dbConnect();
 
-    // res is the parsed JSON from Shopify GraphQL. Expect { data: { products: ... } }
-    const data = res?.data ?? res;
+    // Simple pagination / filtering could be added here
+    const products = await Product.find({ status: "active" })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // // Helpful server-side debug (will appear in terminal)
-    // console.log('Products route - Shopify response keys:', Object.keys(data || {}));
+    // Transform to match expected frontend shape if necessary, 
+    // or just return the array. For now returning simple JSON.
+    // Explicitly wrapping in { products: [...] } because the frontend likely expects that shape 
+    // based on previous Shopify structure, or we can adapt frontend. 
+    // Given the task is to "change that setup to full next.js app", I will return clean JSON.
+    // But to match the previous route response structure ({ products: ... }), I'll keep it wrapping.
 
-    if (data?.errors) {
-      console.error('Shopify GraphQL errors:', data.errors);
-      return NextResponse.json({ error: 'Shopify GraphQL errors', details: data.errors }, { status: 502 });
-    }
+    // Calculate average rating dynamically for each product
+    const productsWithStats = products.map((product: any) => {
+      const reviewCount = product.reviewCount || 0;
+      const ratingTotal = product.ratingTotal || 0;
+      const averageRating = reviewCount > 0 ? ratingTotal / reviewCount : 0;
 
-    const products = data?.products ?? null;
+      // DEBUG: Log stats for problem products
+      if (reviewCount > 0 && averageRating === 0) {
+        console.log(`Product ${product._id} Stats Mismatch:`, {
+          reviewCount,
+          ratingTotal,
+          dbAverageRating: product.averageRating,
+          calcAverageRating: averageRating
+        });
+      }
 
-    // Return a consistent shape: { products: { edges: [...] } } or { products: null }
-    const response = NextResponse.json({ products });
-    
-    // Prevent caching at all levels (browser, CDN, etc.)
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    
-    return response;
-  } catch (err: any) {
-    console.error('Products route fetch error:', err);
-    const response = NextResponse.json({ error: 'Failed to fetch products', message: err?.message ?? String(err) }, { status: 500 });
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    return response;
+      return {
+        ...product,
+        averageRating: parseFloat(averageRating.toFixed(2))
+      };
+    });
+
+    return NextResponse.json({ products: productsWithStats });
+  } catch (error: any) {
+    console.error("Products fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch products" },
+      { status: 500 }
+    );
   }
 }

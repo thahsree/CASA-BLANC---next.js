@@ -1,143 +1,80 @@
 "use client";
 import { useCart } from "@/context/CartContext";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import CartSkeleton from "./CartSkeleton";
+import Loader from "./Loader";
 
-// CartView: a small client component that interacts with existing /api/cart
-// API routes to create/add lines and to fetch the cart. Uses session cookies
-// to persist the cart id across page reloads.
 export default function CartView() {
   const router = useRouter();
-  const { setCartItems, fetchCartFromAPI } = useCart();
-  const [cart, setCart] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { cartData: cart, isLoading, updateQuantity, removeItem } = useCart();
   const [updatingLineId, setUpdatingLineId] = useState<string | null>(null);
 
-  // Helper to load cart from server using session or stored cartId
-  const loadCart = async () => {
-    try {
-      const res = await fetch("/api/cart");
-      if (!res.ok) throw new Error("Failed to fetch cart");
-      const body = await res.json();
-      setCart(body.cart || null);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Could not load cart");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCart();
-  }, []);
-
   const handleCheckout = () => {
-    // In a real app you would redirect to Shopify checkout or build a
-    // storefront checkout flow. For now just log the cart contents.
     console.log("Checkout cart", cart);
-    if (cart?.checkoutUrl) {
-      window.location.href = cart.checkoutUrl;
-    } else {
-      toast.error("Checkout URL not available. Cart may have expired.");
-    }
+    // TODO: Implement actual checkout redirect or integration
+    toast.info("Checkout functionality is coming soon!");
   };
 
   const handleUpdateQuantity = async (lineId: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      handleRemoveItem(lineId);
-      return;
-    }
+    if (newQuantity < 1) return;
 
     setUpdatingLineId(lineId);
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update",
-          cartId: cart.id,
-          lines: [{ id: lineId, quantity: newQuantity }],
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to update cart");
-      }
-
-      setCart(data.cart || null);
-      // Update context with new cart items
-      await fetchCartFromAPI();
+      await updateQuantity(lineId, newQuantity);
     } catch (err: any) {
       console.error("Error updating cart:", err);
-      toast.error("Failed to update cart: " + (err.message || "Unknown error"));
+      toast.error("Failed to update cart");
     } finally {
       setUpdatingLineId(null);
     }
   };
 
   const handleRemoveItem = async (lineId: string) => {
+    if (!window.confirm("Are you sure you want to remove this item?")) return;
     setUpdatingLineId(lineId);
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "remove",
-          cartId: cart.id,
-          lineIds: [lineId],
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to remove item");
-      }
-
-      setCart(data.cart || null);
-      // Update context with new cart items
-      await fetchCartFromAPI();
+      await removeItem(lineId);
       toast.success("Item removed from cart");
     } catch (err: any) {
       console.error("Error removing item:", err);
-      toast.error("Failed to remove item: " + (err.message || "Unknown error"));
+      toast.error("Failed to remove item");
     } finally {
       setUpdatingLineId(null);
     }
   };
 
-  if (loading) return <CartSkeleton />;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (isLoading && !cart) return <div className="h-[400px] flex items-center justify-center"><Loader /></div>;
 
-  const lines = cart?.lines?.edges?.map((edge: any) => edge.node) || [];
+  // Safely access lines from the MongoDB-style response structure
+  // The structure is typically cart.lines.edges[].node or cart.items directly depending on API
+  // Based on context.tsx: cartData?.cart?.lines?.edges
+  // Based on api/cart/route.ts: formatCartResponse returns lines: { edges: [...] }
+  const lines = cart?.cart?.lines?.edges?.map((edge: any) => edge.node) || [];
 
-  if (!cart || lines.length === 0)
+  if (!cart?.cart || lines.length === 0)
     return (
-      <div className="flex flex-col items-center justify-center text-center gap-4">
-        <div className="w-64 h-64">
-          <img
+      <div className="flex flex-col items-center justify-center text-center gap-4 py-20">
+        <div className="w-64 h-64 relative">
+          <Image
             src="/emptyCart.svg"
             alt="Empty cart"
-            className="w-full h-full"
+            fill
+            className="object-contain"
           />
         </div>
 
-        <h1 className="text-2xl font-semibold text-white/90">
+        <h1 className="text-2xl font-semibold text-white/90 font-montserrat">
           Your cart is empty
         </h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 font-quicksand">
           Start exploring and add items to your cart.
         </p>
 
         <button
           onClick={() => router.push("/products")}
-          className="px-6 py-3 bg-[#C9B27B] text-black font-semibold rounded-md hover:bg-[#b5a265] transition"
+          className="px-6 py-3 bg-[#C9B27B] text-black font-semibold rounded-md hover:bg-[#b5a265] transition font-montserrat"
         >
           Browse Products
         </button>
@@ -145,8 +82,8 @@ export default function CartView() {
     );
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl max-sm:text-xl text-[#FFFFFF]/90 font-semibold mb-6">
+    <div className="space-y-4 font-quicksand">
+      <h1 className="text-2xl max-sm:text-xl text-[#FFFFFF]/90 font-semibold mb-6 font-montserrat">
         My Cart
       </h1>
       {lines.map((line: any) => (
@@ -155,40 +92,43 @@ export default function CartView() {
           className="flex items-center gap-4 bg-zinc-900 p-4 rounded shadow"
         >
           {line.merchandise?.image?.url && (
-            <img
-              src={line.merchandise.image.url}
-              alt={line.merchandise?.title || ""}
-              className="w-20 h-20 object-cover rounded"
-            />
+            <div className="w-20 h-20 relative shrink-0">
+               <Image
+                 src={line.merchandise.image.url}
+                 alt={line.merchandise.product?.title || "Product Image"}
+                 fill
+                 className="object-cover rounded"
+               />
+            </div>
           )}
-          <div className="flex-1">
-            <div className="font-semibold max-sm:text-base max:md:text-lg mb-2 line-clamp-2 font-montserrat text-white/90">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold max-sm:text-base max-md:text-lg mb-1 line-clamp-2 font-montserrat text-white/90">
               {line.merchandise?.product?.title || "Product"}
             </div>
+             <div className="text-sm text-white/70 mb-2">
+                {line.merchandise?.title !== "Default Title" && line.merchandise?.title}
+             </div>
             <div className="text-sm text-white/90 mb-2 mt-1">
-              Price: {line.cost?.totalAmount.currencyCode}{" "}
-              {line.quantity > 0
-                ? (line.cost?.totalAmount.amount / line.quantity).toFixed(2)
-                : line.cost?.totalAmount.amount}{" "}
-              {"/unit"}
+              ₹ {line.cost?.totalAmount?.amount ? (parseFloat(line.cost.totalAmount.amount) / line.quantity).toFixed(2) : "0.00"}{" "}
+              {"/ unit"}
             </div>
 
             {/* Quantity Controls */}
             <div className="flex items-center gap-2 text-black/60">
               <button
                 onClick={() => handleUpdateQuantity(line.id, line.quantity - 1)}
-                disabled={updatingLineId === line.id}
-                className="px-2 py-1 bg-gray-300 hover:bg-gray-400 disabled:opacity-50 rounded text-sm font-semibold"
+                disabled={updatingLineId === line.id || line.quantity <= 1}
+                className="w-8 h-8 flex items-center justify-center bg-zinc-800 text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm font-semibold transition"
               >
                 −
               </button>
-              <span className="px-4 py-1 bg-gray-100 rounded text-sm font-semibold">
+              <span className="px-4 py-1 bg-zinc-800 text-white rounded text-sm font-semibold min-w-[3rem] text-center">
                 {line.quantity}
               </span>
               <button
                 onClick={() => handleUpdateQuantity(line.id, line.quantity + 1)}
                 disabled={updatingLineId === line.id || line.quantity >= 5}
-                className="px-2 py-1 bg-gray-300 hover:bg-gray-400 disabled:opacity-50 rounded text-sm font-semibold"
+                className="w-8 h-8 flex items-center justify-center bg-zinc-800 text-white hover:bg-zinc-700 disabled:opacity-50 rounded text-sm font-semibold transition"
               >
                 +
               </button>
@@ -197,44 +137,41 @@ export default function CartView() {
               <button
                 onClick={() => handleRemoveItem(line.id)}
                 disabled={updatingLineId === line.id}
-                className="ml-4 px-3 py-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded text-sm"
+                className="ml-4 px-3 py-1 bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-50 rounded text-sm transition"
               >
                 Remove
               </button>
             </div>
-            {/* Total Price for this item */}
-            <div className="hidden text-right max-sm:block mt-4">
-              <div className="font-semibold text-white/90">
-                {line.cost?.totalAmount?.currencyCode}{" "}
-                {line.cost?.totalAmount?.amount}
+            {/* Total Price for this item (Mobile) */}
+            <div className="block sm:hidden mt-3 pt-3 border-t border-white/10">
+              <div className="font-semibold text-white/90 text-right">
+                ₹ {parseFloat(line.cost?.totalAmount?.amount || "0").toFixed(2)}
               </div>
             </div>
           </div>
 
-          {/* Total Price for this item */}
-          <div className="text-right max-sm:hidden">
+          {/* Total Price for this item (Desktop) */}
+          <div className="text-right max-sm:hidden shrink-0">
             <div className="font-semibold text-white/90">
-              {line.cost?.totalAmount?.currencyCode}{" "}
-              {line.cost?.totalAmount?.amount}
+               ₹ {parseFloat(line.cost?.totalAmount?.amount || "0").toFixed(2)}
             </div>
           </div>
         </div>
       ))}
 
-      <div className="flex justify-between items-center pt-4 border-t">
-        <div className="text-lg font-semibold text-white/90">Total</div>
-        <div className="text-xl font-bold text-white/90">
-          {cart.cost?.totalAmount?.currencyCode}{" "}
-          {cart.cost?.totalAmount?.amount}
+      <div className="flex justify-between items-center pt-6 border-t border-white/10 mt-8">
+        <div className="text-lg font-semibold text-white/90 font-montserrat">Total</div>
+        <div className="text-xl font-bold text-white/90 font-montserrat">
+           ₹ {parseFloat(cart.cart.cost?.totalAmount?.amount || "0").toFixed(2)}
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex justify-end pt-4">
         <button
-          onClick={handleCheckout}
-          className="px-4 py-2 bg-[#C9B27B] rounded hover:bg-[#b5a265] transition"
+          onClick={() => router.push("/checkout")}
+          className="px-8 py-3 bg-[#C9B27B] text-black font-bold rounded-md hover:bg-[#b5a265] transition font-montserrat shadow-lg"
         >
-          Proceed to checkout
+          Proceed to Checkout
         </button>
       </div>
     </div>

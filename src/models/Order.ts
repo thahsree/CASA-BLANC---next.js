@@ -52,7 +52,8 @@ const orderSchema = new Schema<IOrder>(
       index: true,
     },
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "User",
       default: null,
       index: true,
     },

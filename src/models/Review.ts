@@ -11,6 +11,8 @@ export interface IReview extends Document {
   createdAt: Date;
   updatedAt: Date;
   published: boolean;
+  ipAddress?: string;
+  verified?: boolean;
 }
 
 const reviewSchema = new Schema<IReview>(
@@ -55,6 +57,14 @@ const reviewSchema = new Schema<IReview>(
       type: Boolean,
       default: false,
     },
+    ipAddress: {
+      type: String,
+      select: false, // Don't return by default
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -63,6 +73,12 @@ const reviewSchema = new Schema<IReview>(
 
 // Create compound index for faster queries by product and publication status
 reviewSchema.index({ productId: 1, published: 1 });
+// Optimization for sorting
+reviewSchema.index({ productId: 1, createdAt: -1 });
+// Prevent duplicate reviews from the same email for the same product
+reviewSchema.index({ productId: 1, email: 1 }, { unique: true });
+// Index for Rate Limiting (IP + createdAt)
+reviewSchema.index({ ipAddress: 1, createdAt: -1 });
 
 // Create or retrieve the Review model
 const Review =

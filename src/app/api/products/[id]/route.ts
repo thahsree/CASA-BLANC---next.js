@@ -1,76 +1,56 @@
-import shopify from '@/lib/shopify';
-import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from "@/lib/mongodb";
+import Product from "@/models/Product";
+import { NextRequest, NextResponse } from "next/server";
 
-export const revalidate = 0; // No caching - always fetch fresh from Shopify
-
-// GraphQL query: fetch a single product by id
-// Shopify Storefront product id is a global ID (gid://shopify/Product/XXXX)
-const PRODUCT_BY_ID_QUERY = `
-  query product($id: ID!) {
-    node(id: $id) {
-      ... on Product {
-        id
-        title
-        description
-        descriptionHtml
-        handle
-        priceRange {
-          minVariantPrice { amount currencyCode }
-        }
-        images(first: 6) {
-          edges { node { url altText } }
-        }
-        variants(first: 10) {
-          edges { node { id title price { amount currencyCode } compareAtPrice { amount currencyCode } } }
-        }
-      }
-    }
-  }
-`;
+export const revalidate = 0;
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: rawId } = await params;
-  
-  let id = rawId;
+  const { id } = await params;
+
   if (!id) {
-    return NextResponse.json({ product: null, error: 'Missing product id' });
+    return NextResponse.json({ error: "Missing product id" }, { status: 400 });
   }
-  
-  // Decode in case the ID is URL-encoded
-  id = decodeURIComponent(id);
 
   try {
-    const res: any = await shopify.request(PRODUCT_BY_ID_QUERY, { id });
-    console.log('API /products/[id] - Shopify response:', JSON.stringify(res, null, 2));
-    const data = res?.data ?? res;
+    await dbConnect();
 
-    // Shopify GraphQL errors may appear under data.errors or top-level errors depending on helper
-    const graphErrors = (res && res.errors) || (data && (data as any).errors);
-    if (graphErrors) {
-      console.error('API /products/[id] - GraphQL errors:', graphErrors);
-      return NextResponse.json({ product: null, error: 'Shopify errors', details: graphErrors, raw: res }, { status: 200 });
+    // Try finding by ID first if it looks like an ObjectId
+    let product = null;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      product = await Product.findById(id).lean();
     }
 
-    // `node` will be the Product when the ID is a Product global ID
-    const product = res?.data?.node ?? data?.node ?? null;
-    console.log('API /products/[id] - Extracted product:', product ? `Found: ${product.title}` : 'NULL');
-    
-    const response = NextResponse.json({ product, raw: res });
-    
-    // Prevent caching at all levels (browser, CDN, etc.)
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    
-    return response;
-  } catch (err: any) {
-    // Normalize errors to a 200 so clients can render friendly messages without throwing
-    console.error('Product by id route error:', err);
-    const response = NextResponse.json({ product: null, error: 'Failed to fetch product', message: err?.message ?? String(err) });
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    return response;
+    // If not found by ID, try handle
+    if (!product) {
+      product = await Product.findOne({ handle: id }).lean();
+    }
+
+    if (!product) {
+      return NextResponse.json(
+        { error: "Product not found" },
+        { status: 404 }
+      );
+    }
+
+    // Calculate dynamic average rating
+    const reviewCount = product.reviewCount || 0;
+    const ratingTotal = product.ratingTotal || 0;
+    const averageRating = reviewCount > 0 ? ratingTotal / reviewCount : 0;
+
+    const productWithStats = {
+      ...product,
+      averageRating: parseFloat(averageRating.toFixed(2))
+    };
+
+    return NextResponse.json({ product: productWithStats });
+  } catch (error: any) {
+    console.error("Product fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch product", details: error.message },
+      { status: 500 }
+    );
   }
 }

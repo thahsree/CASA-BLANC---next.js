@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { IoStar } from "react-icons/io5";
 
 interface ProductCardProps {
@@ -17,81 +16,40 @@ export default function ProductCard({
   onCardClick,
   onAddToCart,
 }: ProductCardProps) {
-  const [averageRating, setAverageRating] = useState<number>(0);
-  const [reviewCount, setReviewCount] = useState<number>(0);
+  // Use denormalized stats from product, or default to 0
+  const averageRating = product.averageRating || 0;
+  const reviewCount = product.reviewCount || 0;
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        // Try both full ID and extracted ID
-        let productId = product.id;
-
-        // First try with full ID
-        let response = await fetch(
-          `/api/reviews/${encodeURIComponent(productId)}`
-        );
-
-        let data = await response.json();
-        console.log("Reviews API response:", { productId, data });
-
-        // Check both possible response formats
-        const reviewList = data.data || data.reviews || [];
-
-        if (response.ok && reviewList.length > 0) {
-          const avgRating =
-            reviewList.reduce(
-              (sum: number, review: any) => sum + review.rating,
-              0
-            ) / reviewList.length;
-          setAverageRating(avgRating);
-          setReviewCount(reviewList.length);
-        } else if (!response.ok && product.id.includes("/")) {
-          // If full ID didn't work, try extracted ID
-          const extractedId = product.id.split("/").pop();
-          response = await fetch(
-            `/api/reviews/${encodeURIComponent(extractedId)}`
-          );
-          data = await response.json();
-          console.log("Reviews API response (extracted):", {
-            extractedId,
-            data,
-          });
-
-          const reviewList2 = data.data || data.reviews || [];
-          if (response.ok && reviewList2.length > 0) {
-            const avgRating =
-              reviewList2.reduce(
-                (sum: number, review: any) => sum + review.rating,
-                0
-              ) / reviewList2.length;
-            setAverageRating(avgRating);
-            setReviewCount(reviewList2.length);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching reviews:", error);
-      }
-    };
-
-    fetchReviews();
-  }, [product.id]);
-
-  const variantId = product.variants?.edges?.[0]?.node?.id;
+  const variantId = product.variants?.[0]?._id || product.variants?.edges?.[0]?.node?.id;
   const isInCart = variantId && cartVariantIds.has(variantId);
-  const compareAtPrice =
-    product.variants?.edges?.[0]?.node?.compareAtPrice?.amount;
+  
+  // Helper to extract data regardless of structure (Shopify Edges vs Flat Array)
+  const firstImage = product.images?.[0]?.url 
+    ? { url: product.images[0].url, altText: product.images[0].altText }
+    : product.images?.edges?.[0]?.node;
+
+  const price = product.priceRange?.minVariantPrice?.amount 
+    || product.variants?.[0]?.price 
+    || product.variants?.edges?.[0]?.node?.price?.amount;
+
+  const compareAtPrice = product.variants?.[0]?.compareAtPrice
+    || product.variants?.edges?.[0]?.node?.compareAtPrice?.amount
+    || product.compareAtPrice;
+
+  const displayId = product._id || product.id;
+  console.log(product,"product");
 
   return (
     <div
-      key={product.id}
-      onClick={() => onCardClick(encodeURIComponent(product.id))}
+      key={displayId}
+      onClick={() => onCardClick(encodeURIComponent(displayId))}
       className="slide-animation  bg-zinc-900 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition overflow-hidden flex flex-col h-full cursor-pointer"
     >
-      {product.images?.edges?.[0] && (
+      {firstImage && (
         <div className="relative w-full h-48">
           <Image
-            src={product.images.edges[0].node.url}
-            alt={product.images.edges[0].node.altText || product.title}
+            src={firstImage.url}
+            alt={firstImage.altText || product.title}
             fill
             className="object-cover"
           />
@@ -103,7 +61,7 @@ export default function ProductCard({
           {product.title}
         </h3>
         <p className="text-base max-md:text-sm max-sm:text-xs text-gray-600 line-clamp-2 flex-grow font-quicksand ">
-          {product.description}
+          {product.description?.replace(/<[^>]*>?/gm, '')}
         </p>
 
         {/* Star Rating */}
@@ -127,19 +85,18 @@ export default function ProductCard({
               );
             })}
           </div>
-          {reviewCount > 0 && (
-            <span className="text-xs text-gray-400 max-sm:text-[10px]">
-              {averageRating.toFixed(1)} ({reviewCount})
-            </span>
-          )}
+          <span className="text-xs text-gray-400 max-sm:text-[10px]">
+            {averageRating.toFixed(1)} ({reviewCount})
+          </span>
         </div>
 
         <div className=" bg-zinc-900 rounded-lg mt-3 flex flex-col items-start gap-2 justify-between w-full">
           <div className="flex items-center gap-2 w-full">
             <div className="font-bold text-lg mb-1 max-md:text-base max-sm:text-sm text-white/80">
-              INR. {product.priceRange?.minVariantPrice?.amount}
+              ₹ {price}
             </div>
-            {compareAtPrice && compareAtPrice != 0 && (
+            {/* Show compareAtPrice if it exists and is greater than current price */}
+            {compareAtPrice && Number(compareAtPrice) > Number(price) && (
               <div className="font-light text-lg mb-1 max-md:text-base max-sm:text-sm line-through text-gray-500">
                 {compareAtPrice}
               </div>
